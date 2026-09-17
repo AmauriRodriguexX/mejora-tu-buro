@@ -1,0 +1,8 @@
+# HTML crudo descargado del sitio (pesado y reproducible)
+evidencia/*.html
+
+# Artefactos temporales
+.venvs/
+__pycache__/
+*.pyc
+.DS_Store
