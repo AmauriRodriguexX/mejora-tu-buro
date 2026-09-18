@@ -10,3 +10,16 @@ __pycache__/
 # Archivos de bloqueo de LibreOffice/Office
 .~lock.*#
 ~$*
+
+# Configuración local y secretos
+.env
+.env.*
+!.env.example
+
+# Material de auditoría local; no publicar en el repositorio de propuesta.
+evidencia/
+entrega-final/
+BITACORA_UX.md
+CLAUDE.md
+PLAN_AUDITORIA_UX.md
+auditoria-ux.md
