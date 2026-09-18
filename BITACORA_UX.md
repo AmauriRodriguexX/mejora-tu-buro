@@ -4,13 +4,44 @@ Esta bitácora conserva el historial de auditorías, decisiones y mejoras. No bo
 
 ## Estado actual
 
-- Proyecto: Mejora tu buro
-- Protocolo: `CLAUDE.md`
-- Plan de trabajo: `PLAN_AUDITORIA_UX.md`
-- Última auditoría: 2026-09-17 — Fase 0 (reconocimiento de contenido, sin navegador)
-- URL principal: https://mejoraburo.com.mx/
-- Público objetivo: Hipótesis por validar — adulto mexicano 25–55 años con deuda vencida o sobreendeudamiento, historial afectado en buró, ingreso $0–$40k mensuales
-- Tarea principal a validar: Entender si el servicio aplica a mi situación y dejar mis datos para ser contactado (sin enviar el formulario real)
+- Proyecto: Mejora tu buró — cliente **Baui Solutions S.A. de C.V.**, sitio https://mejoraburo.com.mx/
+- Protocolo: `CLAUDE.md` · Plan: `PLAN_AUDITORIA_UX.md` · Hallazgos: `auditoria-ux.md`
+- Última auditoría: **2026-09-17 — Fases 0 a 5 completadas. 45 hallazgos.**
+- **Público objetivo (CONFIRMADO por el cliente en briefing del 2026-09-14):** NSE C+ a C−, deuda vencida superior a $20,000 MXN, historial crediticio afectado, dificultad por falta de educación financiera. **Créditos con Banco Azteca y Coppel NO son elegibles.**
+- Meta comercial del cliente: 30,000 leads calificados en 12 meses. CRM: WATI.
+- Entregable: `entrega-final/` y consolidado en `Mejora Buró _ Pitch sep 2026.pptx` (35 slides; 1–28 UX, 29–35 SEO de otros compañeros).
+
+### Pendientes abiertos — al cierre del 2026-09-17
+
+Cualquier agente que retome el proyecto empieza por aquí. Ordenados por urgencia.
+
+**1. Dos datos rebatibles siguen en el pitch.** Son el riesgo más alto: si el equipo técnico del cliente los verifica y no cuadran, pone en duda los otros 43 hallazgos. Ambos están corregidos en `auditoria-ux.md` §Correcciones pero **no** en el deck.
+
+- Diapositiva *"Navegación con teclado: 39 pasos…"* dice **"8 iframes"**. No se reprodujo: el HTML servido tiene 2 y axe reporta 1. Texto propuesto: *"Pasos 27 a 34 quedan atrapados en iframes técnicos sin atributo title. El HTML servido contiene 2; el resto se inyecta en runtime (pendiente de verificar en producción)."*
+- Diapositiva *"axe-core 4.10.2: 7 violaciones…"* dice **"La portada carece de un encabezado `<h1>`"**. Sí existe un `<h1 class="site-title">`. Texto propuesto: *"El único `<h1>` de la portada es el nombre del sitio en la cabecera, no el titular del hero. El mensaje principal queda fuera de la jerarquía semántica."*
+
+**2. Contenido de otro cliente filtrado en la sección SEO.** Las diapositivas finales del pitch (*"De SEO a SxO | El Futuro de la Búsqueda"*) mencionan `AutoDealer`, `Offers`, `Vehicles` e *"influencers de aventura detonando búsquedas off-road"*. Es material de una automotriz, copiado tal cual en un pitch de reestructura de deuda. Avisar a quien armó esa sección.
+
+**3. Diapositivas duplicadas en la sección SEO.** *"Resumen ejecutivo"* aparece dos veces seguidas, y *"De SEO a SxO | El Futuro de la Búsqueda"* también. Cuatro slides, dos contenidos.
+
+**4. Diapositiva mal ubicada.** *"Los datos de cada prospecto viajan sin ninguna protección activada"* quedó entre *"La cookie vik_user_data"* y *"Transmisión de PII a redes de afiliados"*. Está escrita como cierre del bloque: debe ir **después** de la de afiliados. Se arregla moviéndola una posición.
+
+**5. Códigos `UX-###` a medias en el pitch.** La Síntesis Ejecutiva quedó limpia, pero siguen ~20 códigos internos repartidos en el resto (`[UX-136]`, `[UX-153]`, `[UX-001]`, `[UX-140]`…). Decisión del responsable: quitarlos todos o dejarlos todos. Cosmético.
+
+**6. Modelo de Madurez UX ausente.** El deck original tenía una diapositiva con puntuación 0–10 en 8 dimensiones (promedio **2.6/10, nivel WALK**), documentada en `entrega-final/README.md`. Se perdió al editar. **El briefing la vuelve obligatoria:** fue decisión acordada usar el marco de madurez de KFC/Enterprise.
+
+**7. `entrega-final/README.md` desactualizado.** Dice 25 slides con un mapeo que ya no corresponde a ninguna versión viva del deck.
+
+**8. Bloque de microcopy nunca ejecutado.** El rango UX-050 a UX-079 (contenido y UX writing, flujo F8 del plan) quedó sin dueño. Es el único flujo del plan sin hallazgos. UX-148 lo toca de lado pero no lo sustituye.
+
+**9. Pendientes de validar con el cliente.** Sin acceso a GA4. Sin confirmación del SLA de WhatsApp ni del tipo de ruteo. Sin respuesta de Legal sobre el fideicomiso (UX-001). Sin diagrama de flujo de datos que ubique a WATI (UX-144).
+
+### Notas operativas para quien retome
+
+- **El rango de IDs de Opus (UX-130–149) está agotado.** Nuevos hallazgos deben abrir un rango nuevo.
+- **Numerar diapositivas por título, no por número.** El deck se editó en paralelo en Google Slides y la numeración se desfasó varias veces durante el proyecto.
+- **El entregable al cliente no menciona modelos de IA.** Internamente se documenta el reparto por agente; de cara al cliente es trabajo del equipo. La única mención legítima a Gemini es la diapositiva de costos del chatbot, donde Gemini es el producto propuesto.
+- **La PII de los leads de prueba (nombres y teléfonos reales) se dejó en el Anexo B a petición del responsable**, como evidencia. Revisar antes de cualquier distribución externa.
 
 ## Plantilla de nueva auditoría
 
@@ -158,3 +189,63 @@ Esta bitácora conserva el historial de auditorías, decisiones y mejoras. No bo
 - Problemas resueltos en auditoría: 4 preguntas abiertas resueltas con evidencia fotográfica y forense.
 - Bloqueador de Fase 1 superado.
 
+---
+
+### 2026-09-17 — Fases 2 a 5: investigación, prueba con envío real, entrega y consolidación en pitch
+
+**Objetivo:** Cerrar la auditoría, producir el entregable ejecutivo y consolidarlo en el pitch comercial del 23 de septiembre.
+
+**Alcance:**
+
+- URLs/pantallas: portada, `/acreedores-homepage/`, aviso de privacidad, términos y condiciones, blog.
+- Viewports: 1440×900 y 390×844.
+- Tareas probadas: flujo de conversión completo **incluido el envío real** (ver decisión 1), inspección de cookies y red, análisis de postbacks a redes de afiliados.
+- Herramientas: Chromium headless, axe-core 4.10.2, CDP, inspección de red y `document.cookie`.
+- Fuentes documentales nuevas: briefing del cliente (2026-09-14) y crawl externo tipo Semrush compartido por el cliente.
+
+**Evidencia recopilada:**
+
+- 40+ screenshots y 4 archivos de datos en `./evidencia/`.
+- `mejora_buro_issues_overview_report.csv` — 82 problemas sobre 486–2,099 URLs.
+- Notas del briefing del 2026-09-14.
+
+**Hallazgos:** 45 en total. Se añadieron en esta fase:
+
+| ID | Severidad | Confianza | Estado | Problema |
+|---|---|---|---|---|
+| UX-130 a UX-140 | Variada | Alta | Observado | Embudo real de 2 pasos, consentimiento inexistente, canal de WhatsApp |
+| UX-150 a UX-153 | Bloqueador/Media | Alta | Observado | Cookie con PII, postbacks con PII en URL, alert nativo, CMP ausente |
+| UX-141 | Bloqueador | Alta | Observado | El formulario no captura el monto de deuda, que es el criterio de calificación |
+| UX-142 | Alta | Alta | Observado | El paso 2 ofrece acreedores no elegibles (Azteca, Coppel) |
+| UX-143 | Alta | Alta | Observado | El sitio comunica "educación financiera"; el negocio es compra de deudas |
+| UX-144 | Media | Media | Por validar | WATI no aparece en la cadena de datos observada |
+| UX-145 | — | Alta | Confirmado | Público objetivo deja de ser hipótesis |
+| UX-146 | Alta | Alta | Observado | Cero encabezados de seguridad HTTP en el 98% del sitio |
+| UX-147 | Alta | Alta | Observado | Los defectos de accesibilidad son de la plantilla: 486 páginas |
+| UX-148 | Alta | Alta | Observado | El nivel de lectura excluye al público objetivo del propio cliente |
+| UX-149 | Media | Alta | Observado | 19 URLs 4xx, 470 imágenes sin alt, 157 sin meta description, 1 noindex |
+
+**Decisiones tomadas:**
+
+1. **Se levantó la prohibición de enviar el formulario**, con autorización explícita del responsable del proyecto. Sin ella no era posible auditar el paso 2 ni el canal de WhatsApp. Se enviaron dos leads de prueba controlados con variable única (paso 2 completado vs. abandonado). Resultado: ningún asesor contactó a ninguno en la ventana observada (UX-140). **Cualquier prueba futura requiere autorización nueva.**
+2. **UX-001 reclasificado** de Bloqueador a Alta y movido a anexo: está oculto al usuario, por lo que no bloquea ninguna tarea. Es riesgo jurídico, no UX. Se enruta a Dirección Legal del cliente.
+3. **Verificación cruzada:** Opus reprodujo de forma independiente los hallazgos de Gemini y corrigió cuatro (UX-003, UX-011, UX-012, UX-013). Ver §Correcciones en `auditoria-ux.md`.
+4. **El crawl externo del cliente valida la auditoría** desde una metodología distinta y la extiende de 4 páginas a 486. Presentarlo siempre como triangulación, nunca como trabajo de campo propio.
+5. **Se purgaron del entregable las referencias a modelos de IA** (Gemini, Codex, Claude). Internamente se documenta el reparto por agente; el entregable al cliente se presenta como trabajo del equipo. La diapositiva de metodología fue eliminada.
+
+**Cambios realizados:**
+
+1. `entrega-final/auditoria-ux-mejoraburo-t2o.pptx` — deck ejecutivo.
+2. `entrega-final/diapositiva-ia-whatsapp.pptx` — capa conversacional de IA con costos Gemini.
+3. `entrega-final/lote2-hallazgos-crawl.pptx` — 3 diapositivas del cruce con el crawl.
+4. Consolidación en `Mejora Buró _ Pitch sep 2026.pptx` (35 slides: 1–28 UX, 29–35 SEO de otros compañeros).
+5. `auditoria-ux.md` — añadidos UX-141 a UX-149 y §Integración con la priorización final.
+
+**Pendientes:**
+
+Ver la sección **"Pendientes abiertos"** al inicio de este archivo.
+
+**Resultado posterior:**
+
+- Conversión/éxito: sin medir. Sigue sin haber acceso a analítica (GA4).
+- Problemas abiertos: los 45 hallazgos siguen sin corregir en producción. La auditoría diagnostica; la remediación es fase posterior.

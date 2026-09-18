@@ -10,14 +10,15 @@ Archivo de hallazgos compartido entre agentes. Plan: `PLAN_AUDITORIA_UX.md`. Pro
 | Sonnet 5 (Claude) | UX-050 – UX-079 | Contenido y microcopy | Pendiente |
 | gpt-6-astra (Codex) | UX-080 – UX-099 | Contexto, regulación, patrones oscuros | ✅ 8 hallazgos |
 | gpt-5.6-luna (Codex) | UX-100 – UX-129 | Inventario técnico y accesibilidad | No ejecutado (cubierto por Opus) |
-| Opus 5 (Claude Code) | UX-130 – UX-149 | Embudo real, consentimiento, canal de contacto | ✅ 9 hallazgos |
-| Opus 5 (Claude Code) | UX-140+ | Canal conversacional WhatsApp | ⏳ Prueba en curso |
+| Opus 5 (Claude Code) | UX-130 – UX-140 | Embudo real, consentimiento, canal de contacto | ✅ 11 hallazgos |
+| Opus 5 (Claude Code) | UX-150 – UX-153 | Prueba con envío real autorizado | ✅ 4 hallazgos |
+| Opus 5 (Claude Code) | UX-141 – UX-149 | Cruce con briefing del cliente y crawl externo | ✅ 9 hallazgos |
 
-**Total: 30 hallazgos documentados.** Verificación cruzada aplicada: Opus reprodujo de forma independiente los hallazgos de Gemini y corrigió cuatro (ver §Correcciones).
+**Total: 45 hallazgos documentados.** El rango de Opus (UX-130–149) quedó agotado; nuevos hallazgos deben abrir un rango nuevo. Verificación cruzada aplicada: Opus reprodujo de forma independiente los hallazgos de Gemini y corrigió cuatro (ver §Correcciones).
 
 **Material disponible en `./evidencia/`:** `home.html`, `aviso-privacidad.html`, `terminos.html` y sus versiones `.txt` en texto limpio, descargados el 2026-09-17.
 
-**Restricción vigente:** nadie envía el formulario. Dispara el contacto de un consultor humano real por WhatsApp.
+**Restricción levantada el 2026-09-17:** la prohibición de enviar el formulario se levantó con autorización explícita del responsable del proyecto, para poder auditar el flujo completo y el canal de WhatsApp. Se enviaron dos leads de prueba controlados (ver §Hallazgos de la prueba con envío real y UX-140). Cualquier prueba futura requiere autorización nueva.
 
 ## Gemini 3.8 Flash (Antigravity) — evidencia en navegador
 
@@ -637,6 +638,179 @@ Pendiente de validar con el cliente: si el primer contacto es automático o manu
 
 ---
 
+## Opus 5 — cruce con briefing del cliente y crawl externo (UX-141 a UX-149)
+
+Añadido el 2026-09-17, después de la entrega del deck. Dos fuentes nuevas:
+
+1. **Briefing del cliente** (reunión del 2026-09-14). Define meta comercial, criterios de lead calificado, stack y decisiones ya acordadas.
+2. **Crawl externo tipo Semrush** (`mejora_buro_issues_overview_report.csv`, 82 problemas sobre 486–2,099 URLs), compartido por el cliente.
+
+### Contexto del briefing que cambia el estado de la auditoría
+
+- **Público objetivo confirmado** (deja de ser hipótesis): NSE C+ a C−, deuda vencida superior a $20,000 MXN, historial crediticio afectado, dificultad por falta de educación financiera. Créditos con **Banco Azteca y Coppel NO son elegibles**.
+- **Meta comercial:** 30,000 leads calificados en 12 meses.
+- **Modelo de negocio declarado:** "entidad dedicada a la **compra de deudas**".
+- **Stack:** CRM **WATI**; libertad total concedida para modificar sitio, formularios y recorrido.
+- **Decisiones ya acordadas:** chatbot de IA en WhatsApp; medición server-side vía GTM; uso del marco de madurez de KFC/Enterprise.
+
+---
+
+ID: UX-141
+Severidad: Bloqueador (comercial)
+Confianza: Alta
+Estado: Observado
+Ubicación: https://mejoraburo.com.mx/ — formulario paso 1 y `/acreedores-homepage/`
+Problema: El sitio nunca captura el criterio de calificación principal del negocio. El briefing define el lead calificado por **monto de deuda mayor a $20,000 MXN**; el paso 1 pregunta rango de *ingresos* y el paso 2 pregunta *quién* le cobra. Ningún campo pregunta cuánto debe.
+Impacto: Imposible filtrar leads contra la meta de 30,000 sin llamada humana. Se paga CPL a redes de afiliados por volumen no calificable.
+Evidencia: Campos del paso 1 (nombre, correo, WhatsApp, rango de ingresos) y 43 casillas de acreedores en el paso 2. Criterio de calificación declarado en el briefing del 2026-09-14.
+Recomendación: Añadir un campo de rango de deuda total en el paso 1, o capturarlo en la capa conversacional de WhatsApp antes del handoff al asesor.
+Criterio de aceptación: Todo lead entregado al CRM incluye un rango de deuda que permite clasificarlo como calificado o no sin intervención humana.
+
+---
+
+ID: UX-142
+Severidad: Alta
+Confianza: Alta
+Estado: Observado
+Ubicación: https://mejoraburo.com.mx/acreedores-homepage/
+Problema: El paso 2 ofrece explícitamente acreedores que el negocio no acepta. El briefing establece que los créditos con Banco Azteca y Coppel no son elegibles, pero ambos figuran entre las 43 casillas seleccionables.
+Impacto: Se captan, procesan y pagan leads que se descartan por definición. Desperdicio directo de presupuesto de medios y de tiempo comercial.
+Evidencia: Las 43 casillas incluyen "Coppel/Bancoppel" y "Elektra/Banco Azteca" (ver UX-135).
+Recomendación: Retirar esas opciones, o mantenerlas y usarlas como filtro de descalificación inmediata con un mensaje honesto al usuario.
+Criterio de aceptación: Ningún lead cuya única deuda sea con acreedores no elegibles llega al equipo comercial.
+
+---
+
+ID: UX-143
+Severidad: Alta
+Confianza: Alta
+Estado: Observado
+Ubicación: https://mejoraburo.com.mx/ — hero y FAQ
+Problema: La comunicación del sitio contradice el modelo de negocio declarado. El briefing describe la operación como compra de deudas; el sitio se define en su FAQ como "educación y herramientas para organizar su panorama".
+Impacto: Agrava UX-085. No es un desajuste de tono entre hero y FAQ: es una discrepancia entre lo que el negocio hace y lo que comunica. En sector YMYL con compra de cartera, es exposición regulatoria además de fricción de conversión.
+Evidencia: Hero "Pagar menos al mes…"; FAQ "¿Qué hacemos?" define educación financiera; briefing del cliente define compra de deudas.
+Recomendación: Alinear la propuesta de valor con el servicio real, explicando el modelo en lenguaje llano antes de capturar datos.
+Criterio de aceptación: Un usuario puede describir correctamente qué hace la empresa después de leer solo la portada.
+
+---
+
+ID: UX-144
+Severidad: Media
+Confianza: Media
+Estado: Por validar
+Ubicación: Cadena de tratamiento de datos — frontend y Aviso de Privacidad
+Problema: El briefing indica que el cliente usa **WATI** como CRM para centralizar leads, pero WATI no aparece en ningún punto de la cadena de datos observada en el frontend (cookie, postbacks, formulario).
+Impacto: No se puede verificar si WATI está declarado como encargado del tratamiento ni en qué momento recibe la PII.
+Evidencia: La auditoría mapeó PII hacia `vik_user_data`, `mejoraburotracker.com` (Keitaro) y `tracker2.doaffiliate.net`. Ninguna llamada a WATI fue observada.
+Recomendación: Solicitar al cliente el diagrama de flujo de datos y verificar que el Aviso de Privacidad declare a WATI como encargado.
+Criterio de aceptación: El Aviso de Privacidad enumera a todos los encargados reales del tratamiento.
+
+---
+
+ID: UX-145
+Severidad: — (corrección de estado, no defecto)
+Confianza: Alta
+Estado: Confirmado por el cliente
+Ubicación: `PLAN_AUDITORIA_UX.md` §2, `BITACORA_UX.md` Estado actual
+Problema: El público objetivo estaba marcado como hipótesis "Por validar". El briefing del cliente lo define formalmente.
+Impacto: Toda conclusión que dependía de la hipótesis de público pasa de "Por validar" a sustentada.
+Evidencia: Briefing del 2026-09-14: NSE C+ a C−, deuda > $20,000 MXN, historial afectado, falta de educación financiera.
+Recomendación: Actualizar plan y bitácora. Ya hecho en esta entrada.
+Criterio de aceptación: Ningún documento del proyecto sigue presentando el público objetivo como suposición del equipo auditor.
+
+---
+
+ID: UX-146
+Severidad: Alta
+Confianza: Alta
+Estado: Observado
+Ubicación: Todo el sitio — encabezados HTTP de respuesta
+Problema: El sitio no envía ninguno de los cinco encabezados de seguridad básicos: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options` ni `Referrer-Policy`.
+Impacto: Agrava directamente UX-153. La remediación propuesta para la cookie con PII (restringir acceso vía CSP) no parte de una política mal configurada: parte de cero. Los ~70 scripts de terceros no tienen ninguna barrera técnica. Sin CSP, un CMP de cookies no puede garantizar bloqueo real.
+Evidencia: Crawl externo — 2,099 URLs afectadas (98.27% del sitio) para los cinco encabezados.
+Recomendación: Habilitar los cinco encabezados en servidor o CDN. Desplegar CSP primero en modo `report-only` para medir qué se rompería antes de bloquear.
+Criterio de aceptación: Los cinco encabezados presentes en todas las respuestas; CSP en modo enforce sin romper funcionalidad.
+
+---
+
+ID: UX-147
+Severidad: Alta
+Confianza: Alta
+Estado: Observado
+Ubicación: Todo el sitio — plantilla (tema de WordPress)
+Problema: Los defectos de accesibilidad detectados en la portada no son de la portada: son de la plantilla, y se replican en el sitio completo.
+Impacto: Eleva la severidad y el retorno de las correcciones. Un solo cambio en el tema corrige 486 páginas.
+Evidencia: Crawl externo sobre 486 URLs. Contraste insuficiente: 486/486 (100%). Marcos sin `title`: 486/486 (100%). Enlaces sin texto discernible: 486/486 (100%). Selector sin nombre accesible: 8 URLs. h1 múltiple: 57 URLs. Saltos de nivel de encabezado: 299 URLs. Coincide con lo detectado por axe-core en la portada: verificación cruzada entre dos metodologías independientes.
+Recomendación: Corregir foco visible, contraste, etiquetas y `title` de iframes en el tema, antes de cualquier optimización página por página.
+Criterio de aceptación: Un nuevo crawl reporta cero URLs con esas tres reglas.
+
+---
+
+ID: UX-148
+Severidad: Alta
+Confianza: Alta
+Estado: Observado
+Ubicación: Todo el contenido publicado, incluido el blog
+Problema: El nivel de lectura del sitio excluye a su propio público objetivo. El 58% de las páginas (283 URLs) requiere nivel de estudios superiores para leerse con fluidez, y otro 38% (187 URLs) está en el escalón más difícil de la escala Flesch.
+Impacto: El briefing define el público como NSE C+ a C− con dificultades derivadas de **falta de educación financiera**. Una empresa que vende educación financiera redacta como si el lector ya la tuviera. Conecta con UX-143 y UX-085.
+Evidencia: Crawl externo — "Contenido: Lectura difícil" 283 URLs (58.23%); "Lectura muy difícil" 187 URLs (38.48%).
+Recomendación: Reescribir hero, FAQ y la pantalla de acreedores con frases cortas y vocabulario cotidiano. Fijar un umbral de legibilidad como requisito de publicación.
+Criterio de aceptación: Ninguna página crítica del embudo supera el umbral de dificultad acordado.
+
+---
+
+ID: UX-149
+Severidad: Media
+Confianza: Alta
+Estado: Observado
+Ubicación: Todo el sitio
+Problema: Higiene técnica descuidada a escala: 19 URLs internas devuelven error 4xx, 470 imágenes (41%) tienen atributo `alt` vacío, 157 URLs (32%) no tienen meta description y una URL está marcada con `noindex`.
+Impacto: Enlaces rotos en la navegación; 470 imágenes invisibles para lectores de pantalla y buscadores; una página potencialmente importante fuera del índice.
+Evidencia: Crawl externo — "Códigos de respuesta: Error de cliente interno (4xx)" 19 URLs; "Imágenes: Falta texto ALT" 470; "Meta description: Falta" 157; "Directivas: Noindex" 1.
+Recomendación: Identificar cuál es la URL con `noindex`; si es de conversión, es fuga silenciosa. Corregir los 4xx y establecer `alt` obligatorio en el flujo editorial.
+Criterio de aceptación: Cero 4xx internos; ninguna imagen de contenido sin `alt`; `noindex` solo donde sea intencional.
+
+---
+
+### Nota metodológica sobre el crawl externo
+
+El reporte no contiene ningún "Error" crítico: son 4 problemas, 37 avisos y 41 oportunidades. Nada está roto para los buscadores. Es un sitio funcional pero descuidado, y conviene presentarlo así: exagerar la gravedad es arriesgado cuando el cliente puede correr el mismo reporte.
+
+**Matiz sobre rendimiento:** la auditoría calificó el rendimiento percibido con 6/10 ("lo mejor del sitio", FCP 1.8 s, TTFB 1.1 s). Ese dato es de la portada y sigue siendo válido, pero el crawl reporta JavaScript duplicado, heredado y sin usar, más recursos que bloquean el renderizado, en el 94% de las páginas. El 6/10 sobreestima al sitio completo.
+
+---
+
 ## Integración — priorización final
 
-_Se consolida aquí la priorización por impacto y esfuerzo cuando cierre la prueba de WhatsApp._
+Cerrada el 2026-09-17. 45 hallazgos. Prioridad por impacto y esfuerzo.
+
+### Quick wins — bajo esfuerzo, alto impacto
+
+| # | Hallazgo | Acción | Esfuerzo |
+|---|---|---|---|
+| 1 | UX-136 | Casilla de consentimiento visible, obligatoria y operable por teclado, con enlace al Aviso contiguo | Horas |
+| 2 | UX-146 | Habilitar los cinco encabezados de seguridad en servidor o CDN | Horas |
+| 3 | UX-152 | Eliminar el `alert()` nativo de error de afiliados | Minutos |
+| 4 | UX-006 / UX-084 | Sustituir los términos de marketplace por términos de asesoría financiera | Días (legal) |
+| 5 | UX-002 / UX-010 | Etiqueta accesible para el selector y contraste del menú a ratio ≥4.5:1 | Horas |
+| 6 | UX-012 | Enlazar o retirar la insignia de reseñas de Google | Minutos |
+| 7 | UX-001 | Purgar `brand-logos.png` del servidor, o transparentar el respaldo fiduciario | Horas (decide Legal) |
+
+### Cambios estructurales
+
+| # | Hallazgo | Acción | Esfuerzo |
+|---|---|---|---|
+| 1 | UX-153 / UX-146 | Eliminar la cookie con PII; sesión con token opaco en backend | Semanas |
+| 2 | UX-151 / UX-130 | Migrar postbacks de afiliados a server-to-server con ID anónimo | Semanas |
+| 3 | UX-147 | Corregir accesibilidad en la plantilla: foco, contraste, etiquetas, `title` de iframes | Semanas |
+| 4 | UX-134 / UX-135 / UX-141 / UX-142 | Rediseñar el embudo: anunciar los 2 pasos, buscador de acreedores, capturar monto de deuda, filtrar acreedores no elegibles | Semanas |
+| 5 | UX-140 | Capa conversacional de IA en WhatsApp con acuse inmediato y precalificación | Semanas |
+| 6 | UX-148 / UX-143 | Reescribir el contenido al nivel de lectura del público real y alinear la propuesta de valor | Semanas |
+| 7 | UX-150 | CMP de cookies con bloqueo previo al consentimiento (requiere UX-146) | Semanas |
+
+### Fuera del flujo UX
+
+- **UX-001** — riesgo regulatorio, enrutado a Dirección Legal del cliente.
+- **UX-140** — canal de WhatsApp: no evaluable, requiere información del cliente.
+- **UX-144** — WATI en la cadena de datos: por validar con el cliente.
+
