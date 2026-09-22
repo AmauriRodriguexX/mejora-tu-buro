@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { getThemePreference, watchSystemTheme } from './themePreference.js';
   import Navbar from './Navbar.svelte';
   import Footer from './Footer.svelte';
   import Calculator from './Calculator.svelte';
@@ -8,10 +9,10 @@
   import { legacyArticles } from './legacyArticles.js';
 
   let { route = '/' } = $props();
-  let theme = $state('light');
+  let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference());
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const home = (hash = '') => `${import.meta.env.BASE_URL}${hash ? `#${hash}` : ''}`;
-  const link = (path) => `${base}${path}`;
+  const link = (path) => `${base}${path}/`;
   const posts = [
     { category: 'Convenios', categorySlug: 'convenios', date: '2026', title: 'Carta convenio de pago en México: guía completa', excerpt: 'Qué datos revisar antes de aceptar una propuesta y realizar un pago.', slug: 'carta-convenio-de-pago', image: 'carta-convenio.jpg' },
     { category: 'Deudas', categorySlug: 'deudas', date: '2025', title: '¿Cómo negociar una quita con el banco?', excerpt: 'Una guía para entender el proceso, sus condiciones y sus posibles efectos.', slug: 'como-negociar-una-quita-con-el-banco', image: 'quita-banco.webp' },
@@ -33,21 +34,24 @@
     '/derechos-arco': ['Legal', 'Ejerce tus derechos ARCO', 'Solicita acceso, rectificación, cancelación u oposición al tratamiento de tus datos personales.']
   };
   let currentPost = $derived(posts.find((post) => route.endsWith(`/${post.slug}`)) ?? null);
+  let categorySlug = $derived(route.startsWith('/entradas/categoria/') ? route.split('/').filter(Boolean).at(-1) : '');
   let article = $derived(currentPost ? legacyArticles[currentPost.slug] : null);
   let isPost = $derived(Boolean(currentPost));
   let readingProgress = $state(0);
   let readingMinutes = $derived(article ? Math.max(3, Math.round((article.sections ?? []).flatMap((section) => section.paragraphs ?? []).join(' ').split(/\s+/).filter(Boolean).length / 190)) : 0);
   let page = $derived(pages[route] ?? ['Página', 'Contenido en preparación', '']);
   onMount(() => {
-    if (!isPost) return;
+    theme = getThemePreference();
+    const unwatchSystemTheme = watchSystemTheme((nextTheme) => theme = nextTheme);
+    if (!isPost) return unwatchSystemTheme;
     const update = () => { const max = document.documentElement.scrollHeight - window.innerHeight; readingProgress = max > 0 ? Math.min(100, Math.max(0, (window.scrollY / max) * 100)) : 0; };
     update(); window.addEventListener('scroll', update, { passive: true });
-    return () => window.removeEventListener('scroll', update);
+    return () => { window.removeEventListener('scroll', update); unwatchSystemTheme(); };
   });
 </script>
 
 <div class:theme-dark={theme === 'dark'} class="site route-page">
-  <Navbar bind:theme />
+  <Navbar />
   <main id="contenido">
     {#if route === '/como-funciona'}
       <section class="surface route-generic"><div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8"><a class="footer-link text-sm font-bold" href={home()}>← Volver al inicio</a><div class="mt-8 max-w-3xl"><p class="eyebrow">Cómo funciona</p><h1 class="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">Entiende el proceso antes de compartir tus datos</h1><p class="muted mt-4 text-lg leading-relaxed">Una guía paso a paso para saber qué ocurre desde la primera conversación hasta la revisión de opciones.</p></div><div class="mt-10 grid gap-5 md:grid-cols-3"><article class="card rounded-2xl p-6"><div class="about-card-icon" aria-hidden="true">1</div><h2 class="mt-4 text-xl font-bold">Cuéntanos tu situación</h2><p class="muted mt-3 text-sm leading-relaxed">Seleccionas qué te preocupa y compartes solo la información inicial necesaria.</p></article><article class="card rounded-2xl p-6"><div class="about-card-icon" aria-hidden="true">2</div><h2 class="mt-4 text-xl font-bold">Revisamos el contexto</h2><p class="muted mt-3 text-sm leading-relaxed">Un asesor analiza institución, rango de deuda y documentos disponibles.</p></article><article class="card rounded-2xl p-6"><div class="about-card-icon" aria-hidden="true">3</div><h2 class="mt-4 text-xl font-bold">Conoces tus opciones</h2><p class="muted mt-3 text-sm leading-relaxed">Recibes una explicación clara de escenarios, condiciones y próximos pasos.</p></article></div><div class="mt-12 grid gap-8 lg:grid-cols-2"><div><h2 class="text-2xl font-extrabold">Qué podríamos solicitar</h2><p class="muted mt-3 leading-relaxed">La lista final depende del caso y debe confirmarse con el asesor. Como referencia, podrían solicitarse:</p><ul class="muted mt-5 grid gap-3 text-sm leading-relaxed"><li>• Identificación oficial vigente.</li><li>• Estado de cuenta o documento de la deuda.</li><li>• Datos de contacto para seguimiento.</li><li>• Carta convenio, si ya recibiste una.</li></ul></div><div><h2 class="text-2xl font-extrabold">Qué puedes esperar</h2><div class="mt-5 grid gap-4"><div class="card rounded-xl p-5"><strong>Tiempo</strong><p class="muted mt-1 text-sm leading-relaxed">El tiempo de revisión depende de la complejidad y de que la información esté completa.</p></div><div class="card rounded-xl p-5"><strong>Resultado</strong><p class="muted mt-1 text-sm leading-relaxed">La conversación orienta; no garantiza descuentos, aprobación ni eliminación de una deuda.</p></div><div class="card rounded-xl p-5"><strong>Instituciones</strong><p class="muted mt-1 text-sm leading-relaxed">Las instituciones atendidas, regulación aplicable y responsables deberán confirmarse en la versión final.</p></div></div></div></div><div class="card mt-10 rounded-2xl p-5 text-sm leading-relaxed" style="background:var(--brand-soft)"><strong>Nota de propuesta:</strong> este contenido es provisional y no verificado. Antes de publicarlo deben validarse bancos o acreedores atendidos, documentos obligatorios, tiempos reales, resultados posibles y la institución reguladora correspondiente.</div><a class="btn-primary focus-ring mt-8" href={home('formulario-captacion')}><span class="button-label">Revisar mi caso</span></a></div></section>
@@ -59,13 +63,13 @@
       <Testimonios />
     {:else if route === '/calculadora'}
       <Calculator />
-    {:else if route === '/entradas'}
-      <BlogIndex />
+    {:else if route === '/entradas' || route === '/entradas/categoria' || (route.startsWith('/entradas/categoria/') && !isPost)}
+      <BlogIndex {categorySlug} />
     {:else if isPost}
       <article class="article-page"><div class="reading-progress" aria-hidden="true"><span style={`transform:scaleX(${readingProgress / 100})`}></span></div><div class="article-hero-layout"><header class="article-header"><div class="article-header-copy px-4 sm:px-6"><nav class="article-breadcrumb" aria-label="Migas de pan"><a class="footer-link" href={home()}>Inicio</a><span aria-hidden="true">/</span><a class="footer-link" href={link('/entradas')}>Entradas</a><span aria-hidden="true">/</span><span>{currentPost.category}</span></nav><a class="article-back footer-link mt-5" href={link('/entradas')}>← Todos los artículos</a><p class="eyebrow mt-8">{currentPost.category}</p><h1 class="mt-3 text-4xl font-extrabold tracking-tight sm:text-6xl">{currentPost.title}</h1><p class="muted mt-5 text-lg leading-relaxed">{currentPost.excerpt}</p><p class="article-meta mt-6">Mejora Buró · {currentPost.date} <span aria-hidden="true">·</span> {readingMinutes} min de lectura</p></div></header><div class="article-hero-wrap"><img class="article-hero" src={`${base}/images/blog/${currentPost.image}`} alt={currentPost.title} /></div></div><div class="article-reading mx-auto px-4 pb-20 pt-10 sm:px-6 sm:pt-14"><div class="article-reading-intro"><span>Guía práctica</span><span>{readingMinutes} min de lectura</span></div>{#each article?.sections ?? [] as section}{#if section.heading}<h2>{section.heading}</h2>{/if}{#each section.paragraphs as paragraph}<p>{paragraph}</p>{/each}{/each}<aside class="article-cta"><p class="font-extrabold">¿Quieres revisar tu situación?</p><p class="muted mt-2 text-sm leading-relaxed">Empieza con información básica y un asesor te explicará las opciones que correspondan a tu caso.</p><a class="btn-primary focus-ring mt-5" href={home('formulario-captacion')}><span class="button-label">Revisar mi caso</span></a></aside></div></article>
     {:else}
       <section class="surface route-generic"><div class="mx-auto max-w-5xl px-4 sm:px-6"><a class="footer-link text-sm font-bold" href={home()}>← Volver al inicio</a><p class="eyebrow mt-10">{page[0]}</p><h1 class="mt-3 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-5xl">{page[1]}</h1><p class="muted mt-4 max-w-2xl text-lg leading-relaxed">{page[2]}</p>{#if route === '/derechos-arco'}<form class="card mt-10 max-w-2xl rounded-2xl p-6 sm:p-8" onsubmit={(event) => event.preventDefault()}><div class="grid gap-5"><label class="font-semibold">Nombre<input class="field mt-2" required autocomplete="name" /></label><label class="font-semibold">Correo electrónico<input class="field mt-2" required type="email" autocomplete="email" /></label><label class="font-semibold">Solicitud<select class="field mt-2" required><option value="">Selecciona una opción</option><option>Acceso</option><option>Rectificación</option><option>Cancelación</option><option>Oposición</option></select></label><label class="block font-semibold">Describe tu solicitud<textarea class="field mt-2 min-h-32" required></textarea></label><button class="btn-primary focus-ring" type="submit"><span class="button-label">Enviar solicitud ARCO</span></button></div></form>{/if}</div></section>
     {/if}
   </main>
-  <Footer />
+  <Footer bind:theme />
 </div>

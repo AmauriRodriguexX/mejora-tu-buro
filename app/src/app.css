@@ -39,8 +39,11 @@ button,input,select { font:inherit; }
 .theme-toggle-thumb { display:block; width:1rem; height:1rem; border-radius:50%; background:var(--surface-raised); box-shadow:0 1px 3px rgba(36,27,53,.25); transition:transform .22s cubic-bezier(.2,.8,.2,1),background .2s ease }
 .theme-toggle[aria-checked="true"] .theme-toggle-track { background:var(--brand) }
 .theme-toggle[aria-checked="true"] .theme-toggle-thumb { transform:translateX(1.05rem); background:#fff }
-.theme-toggle-mobile { justify-content:flex-start; width:100%; border-radius:.75rem; padding:.75rem }
-.theme-toggle-mobile .theme-toggle-track { margin-left:auto }
+.footer-appearance { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap }
+.footer-appearance > div { display:grid; gap:.15rem }
+.footer-appearance-caption { font-size:.7rem; line-height:1.2 }
+.theme-toggle-footer { min-height:2.75rem; padding:.35rem .65rem }
+.footer-appearance-reset { min-height:2.75rem; padding:.5rem .25rem; font-size:.75rem; font-weight:700 }
 .review-badge { display:inline-flex; align-items:center; gap:.45rem; min-height:3rem; padding:.45rem .7rem; border:1px solid var(--border); border-radius:16px; color:var(--text); background:var(--surface-raised); font-size:.78rem; line-height:1.1; transition:border-color .2s ease,background-color .2s ease,transform .2s ease }
 .review-badge:hover { border-color:var(--brand); background:var(--brand-soft); transform:translateY(-1px) }
 .review-stars { color:#f5b301; letter-spacing:-.08em; font-size:.8rem }
