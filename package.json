@@ -1,0 +1,9 @@
+{
+  "name": "mejora-tu-buro",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter app dev",
+    "build": "pnpm --filter app build",
+    "preview": "pnpm --filter app preview"
+  }
+}

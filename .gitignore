@@ -23,3 +23,18 @@ BITACORA_UX.md
 CLAUDE.md
 PLAN_AUDITORIA_UX.md
 auditoria-ux.md
+PLAN_REDISENO_UX.md
+
+# Fuentes internas, prototipos de backend y temporales
+legacy/
+;legacy/
+server/
+scripts/
+tmp/
+
+# Node / Build artifacts
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
