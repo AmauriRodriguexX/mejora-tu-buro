@@ -30,6 +30,7 @@ Resumen y consentimiento de contacto
 
 - Diagnóstico inicial con tarjetas seleccionables y CTA contextual.
 - Métricas de opiniones con conteo progresivo y respeto a `prefers-reduced-motion`.
+- La landing `/testimonios` usa únicamente referencias visuales demostrativas; no presenta reseñas reales ni atribuye testimonios a Google.
 - Franja editorial con imagen 1920×1080 y degradado responsive.
 - Calculadora basada en rangos, sin exigir cifras exactas.
 - Formulario modal con foco inicial, cierre con Escape, bloqueo de scroll y resumen entre pasos.
@@ -62,3 +63,7 @@ Cada push a `main` compila `app/` y publica `app/dist` en GitHub Pages. El workf
 ## Privacidad y secretos
 
 La integración local de WhatsApp/Gemini usa variables en `.env`, nunca en el frontend. No se publican tokens, auditorías ni datos de prueba.
+
+## Opiniones de Google (pendiente de integración oficial)
+
+Para mostrar reseñas reales se debe integrar la API oficial de Google Business Profile desde un backend seguro, con OAuth, un `locationId` y credenciales restringidas. No se deben extraer comentarios mediante scraping ni exponer claves en GitHub Pages. Hasta completar esa integración, las tarjetas de `/testimonios` son únicamente referencias visuales no oficiales.
