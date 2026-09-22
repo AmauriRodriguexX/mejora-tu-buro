@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/extract-legacy-blog.mjs && vite build && node scripts/generate-routes.mjs",
+    "build": "vite build && node scripts/generate-routes.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {

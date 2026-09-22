@@ -30,7 +30,7 @@ CONTEXTO_PROYECTO.md
 legacy/
 ;legacy/
 server/
-scripts/
+/scripts/
 tmp/
 
 # Node / Build artifacts
