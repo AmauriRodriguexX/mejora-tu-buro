@@ -5,7 +5,14 @@
   const routePaths = ['/como-funciona','/calculadora','/testimonios','/acerca-de','/entradas','/entradas/categoria','/entradas/categoria/titulo-del-post','/legal','/terminos-y-condiciones','/aviso-de-privacidad','/politica-de-cookies','/derechos-arco'];
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   let currentRoute = $state('/');
-  function getRoute() { const path = window.location.pathname.replace(basePath, '') || '/'; return routePaths.includes(path) || path.startsWith('/entradas/categoria/') || /^\/entradas\/[^/]+\/[^/]+$/.test(path) ? path : '/'; }
+  function getRoute() {
+    const pathname = window.location.pathname;
+    const relativePath = basePath && (pathname === basePath || pathname.startsWith(`${basePath}/`))
+      ? pathname.slice(basePath.length) || '/'
+      : pathname;
+    const path = relativePath.replace(/\/+$/, '') || '/';
+    return routePaths.includes(path) || path.startsWith('/entradas/categoria/') || /^\/entradas\/[^/]+\/[^/]+$/.test(path) ? path : '/';
+  }
   function startCase(situation = '') { selectedSituation = situation; document.dispatchEvent(new CustomEvent('open-form', { detail: { situation } })); }
   onMount(() => {
     currentRoute = getRoute();
