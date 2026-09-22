@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { getThemePreference, watchSystemTheme } from './lib/themePreference.js';
   import Navbar from './lib/Navbar.svelte'; import Hero from './lib/Hero.svelte'; import Opiniones from './lib/Opiniones.svelte'; import TrustBanner from './lib/TrustBanner.svelte'; import Calculator from './lib/Calculator.svelte'; import HowItWorks from './lib/HowItWorks.svelte'; import Guarantees from './lib/Guarantees.svelte'; import StepWizard from './lib/StepWizard.svelte'; import Faq from './lib/Faq.svelte'; import BlogPreview from './lib/BlogPreview.svelte'; import Footer from './lib/Footer.svelte'; import RoutePage from './lib/RoutePage.svelte'; import CookieBanner from './lib/CookieBanner.svelte'; import MobileBottomNav from './lib/MobileBottomNav.svelte';
   let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference()); let selectedSituation = $state(''); let savingPlan = $state(null);
@@ -20,8 +20,20 @@
     const unwatchSystemTheme = watchSystemTheme((nextTheme) => theme = nextTheme);
     currentRoute = getRoute();
     const onPopState = () => currentRoute = getRoute();
+    async function handleFormAnchor(event) {
+      const link = event.target.closest?.('a[href*="#formulario-captacion"]');
+      if (!link || new URL(link.href, window.location.href).origin !== window.location.origin) return;
+      event.preventDefault();
+      if (currentRoute !== '/') {
+        history.pushState({}, '', `${basePath}/` || '/');
+        currentRoute = '/';
+        await tick();
+      }
+      document.dispatchEvent(new CustomEvent('open-form'));
+    }
+    document.addEventListener('click', handleFormAnchor);
     window.addEventListener('popstate', onPopState);
-    if (currentRoute !== '/') return () => { window.removeEventListener('popstate', onPopState); unwatchSystemTheme(); };
+    if (currentRoute !== '/') return () => { document.removeEventListener('click', handleFormAnchor); window.removeEventListener('popstate', onPopState); unwatchSystemTheme(); };
     document.getElementById('debt')?.setAttribute('inputmode','decimal');
     function updatePointer(event) {
       const button = event.target.closest?.('.btn-primary, .btn-secondary');
@@ -57,7 +69,7 @@
     revealTargets.forEach((section, index) => { section.classList.add('scroll-reveal'); section.style.setProperty('--reveal-delay', `${Math.min(index * 70, 280)}ms`); });
     const revealObserver = reduce ? null : new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver?.unobserve(entry.target); } }), { threshold: .14, rootMargin: '0px 0px -8% 0px' });
     if (revealObserver) revealTargets.forEach((section) => revealObserver.observe(section)); else revealTargets.forEach((section) => section.classList.add('is-visible'));
-    return () => { window.removeEventListener('popstate', onPopState); document.removeEventListener('pointermove', updatePointer); document.removeEventListener('input', formatDebt); document.removeEventListener('blur', finalizeDebt, true); revealObserver?.disconnect(); unwatchSystemTheme(); };
+    return () => { document.removeEventListener('click', handleFormAnchor); window.removeEventListener('popstate', onPopState); document.removeEventListener('pointermove', updatePointer); document.removeEventListener('input', formatDebt); document.removeEventListener('blur', finalizeDebt, true); revealObserver?.disconnect(); unwatchSystemTheme(); };
   });
 </script>
-{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar /><main id="contenido"><Hero onStart={startCase} onSelect={(situation) => selectedSituation=situation} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><StepWizard {selectedSituation} {savingPlan} /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />
+{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar {theme} /><main id="contenido"><Hero onStart={startCase} onSelect={(situation) => selectedSituation=situation} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><StepWizard {selectedSituation} {savingPlan} /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />
