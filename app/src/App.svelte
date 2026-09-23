@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { getThemePreference, watchSystemTheme } from './lib/themePreference.js';
   import Navbar from './lib/Navbar.svelte'; import Hero from './lib/Hero.svelte'; import Opiniones from './lib/Opiniones.svelte'; import TrustBanner from './lib/TrustBanner.svelte'; import Calculator from './lib/Calculator.svelte'; import HowItWorks from './lib/HowItWorks.svelte'; import Guarantees from './lib/Guarantees.svelte'; import StepWizard from './lib/StepWizard.svelte'; import Faq from './lib/Faq.svelte'; import BlogPreview from './lib/BlogPreview.svelte'; import Footer from './lib/Footer.svelte'; import RoutePage from './lib/RoutePage.svelte'; import CookieBanner from './lib/CookieBanner.svelte'; import MobileBottomNav from './lib/MobileBottomNav.svelte';
-  let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference()); let selectedSituation = $state(''); let savingPlan = $state(null);
+  let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference()); let selectedSituations = $state([]); let savingPlan = $state(null);
   const routePaths = ['/como-funciona','/calculadora','/testimonios','/acerca-de','/entradas','/entradas/categoria','/entradas/categoria/titulo-del-post','/legal','/terminos-y-condiciones','/aviso-de-privacidad','/politica-de-cookies','/derechos-arco'];
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   let currentRoute = $state('/');
@@ -14,7 +14,7 @@
     const path = relativePath.replace(/\/+$/, '') || '/';
     return routePaths.includes(path) || path.startsWith('/entradas/categoria/') || /^\/entradas\/[^/]+\/[^/]+$/.test(path) ? path : '/';
   }
-  function startCase(situation = '') { selectedSituation = situation; document.dispatchEvent(new CustomEvent('open-form', { detail: { situation } })); }
+  function startCase(situation = [], contact = null) { selectedSituations = situation; document.dispatchEvent(new CustomEvent('open-form', { detail: { situation, contact } })); }
   onMount(() => {
     theme = getThemePreference();
     const unwatchSystemTheme = watchSystemTheme((nextTheme) => theme = nextTheme);
@@ -24,12 +24,33 @@
       const link = event.target.closest?.('a[href*="#formulario-captacion"]');
       if (!link || new URL(link.href, window.location.href).origin !== window.location.origin) return;
       event.preventDefault();
+      const target = new URL(link.href, window.location.href);
       if (currentRoute !== '/') {
-        history.pushState({}, '', `${basePath}/` || '/');
+        history.pushState({}, '', `${target.pathname}${target.hash}`);
         currentRoute = '/';
         await tick();
+      } else {
+        history.pushState({}, '', `${target.pathname}${target.hash}`);
       }
-      document.dispatchEvent(new CustomEvent('open-form'));
+      const form = document.getElementById('formulario-captacion');
+      if (!form) return;
+      // The form lives in the hero: go all the way to the top so headline and form are seen whole.
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const spotlight = () => {
+        form.querySelector('#hero-situation-0')?.focus({ preventScroll: true });
+        form.classList.remove('is-spotlight');
+        void form.offsetWidth;
+        form.classList.add('is-spotlight');
+        const endSpotlight = (animationEvent) => { if (animationEvent.target !== form) return; form.classList.remove('is-spotlight'); form.removeEventListener('animationend', endSpotlight); };
+        form.addEventListener('animationend', endSpotlight);
+      };
+      if (window.scrollY < 2) { spotlight(); return; }
+      // Light up the card once the scroll lands, not halfway (fallback for browsers without scrollend).
+      let done = false;
+      const land = () => { if (done) return; done = true; window.removeEventListener('scrollend', land); spotlight(); };
+      window.addEventListener('scrollend', land);
+      setTimeout(land, reduceMotion ? 50 : 1200);
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
     document.addEventListener('click', handleFormAnchor);
     window.addEventListener('popstate', onPopState);
@@ -72,4 +93,4 @@
     return () => { document.removeEventListener('click', handleFormAnchor); window.removeEventListener('popstate', onPopState); document.removeEventListener('pointermove', updatePointer); document.removeEventListener('input', formatDebt); document.removeEventListener('blur', finalizeDebt, true); revealObserver?.disconnect(); unwatchSystemTheme(); };
   });
 </script>
-{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar {theme} /><main id="contenido"><Hero onStart={startCase} onSelect={(situation) => selectedSituation=situation} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><StepWizard {selectedSituation} {savingPlan} /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />
+{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar {theme} /><main id="contenido"><Hero onStart={startCase} onSelect={(situation) => selectedSituations=situation} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><StepWizard {selectedSituations} {savingPlan} /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />

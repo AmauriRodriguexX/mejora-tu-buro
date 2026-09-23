@@ -1,0 +1,20 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ headless:true, executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+const p = await b.newPage({ viewport:{width:1440,height:900} });
+const errs=[]; p.on('pageerror',e=>errs.push(e.message));
+await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'});
+await p.evaluate(()=>localStorage.setItem('mb-cookie-consent','rejected')); await p.reload({waitUntil:'networkidle'});
+await p.getByRole('link',{name:'Revisar mi caso'}).first().click();
+await p.waitForTimeout(650);
+const r = await p.evaluate(()=>{const f=document.getElementById('formulario-captacion');return {cls:f.className, shadow:getComputedStyle(f).boxShadow.slice(0,80), focus:document.activeElement.id}});
+console.log('peak', JSON.stringify(r));
+await p.screenshot({ path:'C:/Users/Amauri/AppData/Local/Temp/claude/D--t2o-carpet-especial-mejora-tu-buro-mejora-tu-buro/07e66327-91f7-4a14-ba0e-0b6b83073b6e/scratchpad/spotlight-desktop.png' });
+await p.waitForTimeout(1600);
+console.log('after', await p.evaluate(()=>document.getElementById('formulario-captacion').className));
+// from far down the page
+await p.evaluate(()=>scrollTo(0,3000)); await p.waitForTimeout(300);
+await p.getByRole('link',{name:'Revisar mi caso'}).first().click();
+await p.waitForTimeout(700);
+console.log('from scrolled', await p.evaluate(()=>{const f=document.getElementById('formulario-captacion');const r=f.getBoundingClientRect();return {cls:f.className,top:Math.round(r.top)}}));
+console.log('errors', JSON.stringify(errs));
+await b.close();

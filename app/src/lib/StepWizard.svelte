@@ -1,14 +1,16 @@
 <script>
   import { onMount, tick } from 'svelte';
+  import { situations, situationLabels } from './situations.js';
 
-  let { selectedSituation = '', savingPlan = null } = $props();
+  let { selectedSituations = [], savingPlan = null } = $props();
   let open = $state(false);
   let step = $state(1);
   let debt = $state('');
   let institutions = $state([]);
   let draftInstitutions = $state([]);
   let institutionPicker;
-  let situation = $state('');
+  let situationIds = $state([]);
+  let editingSituation = $state(false);
   let name = $state('');
   let phone = $state('');
   let email = $state('');
@@ -26,17 +28,23 @@
     { label: 'Compradoras de cartera', options: ['Finastrategy','Secorse','Ibkan','Zendere','Otra compradora de cartera'] }
   ];
   const debtRanges = ['$20,000 - $40,000','$41,000 - $99,000','$100,000 - $249,999','Más de $250,000','No estoy seguro'];
-  const situations = [
-    ['atrasos','Tengo pagos atrasados'],['minimos','Solo puedo pagar el mínimo'],['llamadas','Recibo llamadas de cobranza'],['convenio','Quiero entender una carta convenio'],['otro','Otra situación']
-  ];
 
-  $effect(() => { if (selectedSituation) situation = selectedSituation; });
+  $effect(() => { if (selectedSituations.length) situationIds = [...selectedSituations]; });
 
   function openForm(event) {
-    if (event?.detail?.situation) situation = event.detail.situation;
-    step = 1;
+    const detail = event?.detail ?? {};
+    if (detail.situation?.length) situationIds = [...detail.situation];
+    editingSituation = !situationIds.length;
+    if (detail.contact) {
+      name = detail.contact.name ?? '';
+      phone = detail.contact.phone ?? '';
+      privacy = !!detail.contact.privacy;
+      step = 2;
+    } else {
+      step = 1;
+    }
     open = true;
-    tick().then(() => document.getElementById('lead-name')?.focus());
+    tick().then(() => document.getElementById(step === 2 ? 'debt-range' : 'lead-name')?.focus());
   }
   function closeForm() { open = false; }
   function toggleInstitution(item) {
@@ -46,6 +54,9 @@
     }
     const known = draftInstitutions.filter((selected) => selected !== 'No estoy seguro');
     draftInstitutions = known.includes(item) ? known.filter((selected) => selected !== item) : [...known, item];
+  }
+  function toggleSituation(id) {
+    situationIds = situationIds.includes(id) ? situationIds.filter((item) => item !== id) : [...situationIds, id];
   }
   function clearInstitutionSelection() { draftInstitutions = []; }
   function applyInstitutionSelection() {
@@ -94,9 +105,8 @@
   function validateContact() {
     errors = {};
     if (!name.trim()) errors.name = 'Escribe tu nombre.';
-    if (phone.replace(/\D/g, '').length < 10) errors.phone = 'Escribe un teléfono de 10 dígitos.';
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Revisa el formato del correo.';
-    if (!privacy) errors.privacy = 'Acepta el Aviso de Privacidad y los Términos y Condiciones para continuar.';
+    if (phone.replace(/\D/g, '').length < 10) errors.phone = 'Escribe tu celular a 10 dígitos.';
+    if (!privacy) errors.privacy = 'Acepta el Aviso de Privacidad y los Términos para continuar.';
     return Object.keys(errors).length === 0;
   }
 
@@ -104,7 +114,8 @@
     errors = {};
     if (!debt) errors.debt = 'Selecciona un rango o indica que no estás seguro.';
     if (!institutions.length) errors.institution = 'Selecciona al menos una institución o “No estoy seguro”.';
-    if (!situation) errors.situation = 'Selecciona la opción que mejor describe tu situación.';
+    if (!situationIds.length) errors.situation = 'Marca al menos una opción. Si ninguna encaja, elige «Otra situación».';
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Revisa el formato del correo.';
     return Object.keys(errors).length === 0;
   }
 
@@ -159,18 +170,6 @@
   });
 </script>
 
-<section id="formulario-captacion" class="form-launcher py-16 sm:py-20" aria-labelledby="form-launcher-title">
-  <div class="mx-auto max-w-3xl px-4 sm:px-6">
-    <div class="card rounded-2xl p-6 text-center sm:p-10">
-      <p class="eyebrow">Solicitud de revisión</p>
-      <h2 id="form-launcher-title" class="mt-3 text-3xl font-extrabold sm:text-4xl">Cuéntanos sobre tu caso</h2>
-      <p class="muted mx-auto mt-3 max-w-xl">Comparte tus datos básicos y, después, si quieres, agrega detalles para orientar mejor la revisión.</p>
-      <button class="btn-primary focus-ring mt-7" type="button" onclick={openForm}><span class="button-label">Empezar revisión</span></button>
-      <p class="muted mt-3 text-xs">Toma menos de 2 minutos · Sin compromiso</p>
-    </div>
-  </div>
-</section>
-
 {#if open}
   <div class="form-modal-backdrop" role="presentation">
     <div class="form-modal" role="dialog" aria-modal="true" aria-labelledby="form-title">
@@ -195,25 +194,26 @@
             <input id="lead-phone" class="field mt-2" type="tel" inputmode="tel" autocomplete="tel" placeholder="55 1234 5678" bind:value={phone} />
             {#if errors.phone}<span class="mt-1 block text-sm" style="color:var(--danger)">{errors.phone}</span>{/if}
           </label>
-          <label class="block font-semibold" for="lead-email">Correo electrónico <span class="muted text-sm font-normal">(opcional)</span>
-            <input id="lead-email" class="field mt-2" type="email" autocomplete="email" bind:value={email} />
-            {#if errors.email}<span class="mt-1 block text-sm" style="color:var(--danger)">{errors.email}</span>{/if}
-          </label>
           <fieldset class="space-y-3 border-t pt-5" style="border-color:var(--border)">
-            <legend class="font-semibold">Permisos de contacto</legend>
-            <label class="flex gap-3 text-sm leading-relaxed"><input class="mt-1 h-4 w-4" type="checkbox" bind:checked={whatsapp} /><span>Acepto recibir orientación por WhatsApp. Es opcional.</span></label>
+            <legend class="sr-only">Permisos de contacto</legend>
             <label class="flex gap-3 text-sm leading-relaxed"><input class="mt-1 h-4 w-4" type="checkbox" bind:checked={privacy} /><span>He leído y acepto el <a class="underline" style="color:var(--brand)" href={`${base}/aviso-de-privacidad/`}>Aviso de Privacidad</a> y los <a class="underline" style="color:var(--brand)" href={`${base}/terminos-y-condiciones/`}>Términos y Condiciones</a>.</span></label>
             {#if errors.privacy}<span class="block text-sm" style="color:var(--danger)">{errors.privacy}</span>{/if}
           </fieldset>
           <button class="btn-primary focus-ring w-full" type="submit"><span class="button-label">Continuar</span></button>
-          <p class="muted text-xs">Al continuar, podrás agregar datos de tu deuda para ayudar a orientar la revisión.</p>
+          <p class="muted text-sm">En el siguiente paso nos cuentas el monto y con quién tienes la deuda.</p>
         </form>
       {:else if step === 2}
         <form class="space-y-5" onsubmit={submitLead}>
-          <div class="rounded-xl p-4 text-sm" style="background:var(--surface)"><strong>Contacto:</strong> {name} · {phone} {#if email}· {email}{/if} <button class="ml-2 underline" style="color:var(--brand)" type="button" onclick={() => step = 1}>Editar</button></div>
+          <div class="rounded-xl p-4 text-sm" style="background:var(--surface)"><strong>Contacto:</strong> {name} · {phone} <button class="ml-2 underline" style="color:var(--brand)" type="button" onclick={() => step = 1}>Editar</button></div>
 
-          {#if selectedSituation || situation}
-            <div class="rounded-xl p-4 text-sm" style="background:var(--brand-soft)"><strong>Lo que te preocupa:</strong> {situations.find(([id]) => id === situation)?.[1] || situation}</div>
+          {#if situationIds.length && !editingSituation}
+            <div class="rounded-xl p-4 text-sm" style="background:var(--brand-soft)"><strong>Lo que te preocupa:</strong> {situationLabels(situationIds)} <button class="ml-2 underline" style="color:var(--brand)" type="button" onclick={() => editingSituation = true}>Cambiar</button></div>
+          {:else}
+            <fieldset aria-describedby={errors.situation ? 'lead-situation-error' : undefined}>
+              <legend class="block font-semibold">¿Qué te preocupa? <span class="muted text-sm font-normal">Marca todo lo que te pase</span></legend>
+              <div class="hero-situations mt-2">{#each situations as item}<label class="situation-chip"><input type="checkbox" checked={situationIds.includes(item.id)} onchange={() => toggleSituation(item.id)} /><span>{item.label}</span></label>{/each}</div>
+              {#if errors.situation}<span id="lead-situation-error" class="mt-1 block text-sm" role="alert" style="color:var(--danger)">{errors.situation}</span>{/if}
+            </fieldset>
           {/if}
 
           <label class="block font-semibold" for="debt-range">¿Cuál es el monto aproximado de tu deuda?
@@ -241,13 +241,14 @@
             {#if errors.institution}<span id="institution-error" class="mt-1 block text-sm" style="color:var(--danger)">{errors.institution}</span>{/if}
           </fieldset>
 
-          <label class="block font-semibold" for="situation">Describe mejor tu situación
-            <select id="situation" class="field mt-2" bind:value={situation}><option value="">Elige la opción más cercana</option>{#each situations as item}<option value={item[0]}>{item[1]}</option>{/each}</select>
-            {#if errors.situation}<span class="mt-1 block text-sm" style="color:var(--danger)">{errors.situation}</span>{/if}
+          <label class="block font-semibold" for="lead-email">Correo electrónico <span class="muted text-sm font-normal">(opcional)</span>
+            <input id="lead-email" class="field mt-2" type="email" autocomplete="email" bind:value={email} aria-invalid={!!errors.email} />
+            {#if errors.email}<span class="mt-1 block text-sm" style="color:var(--danger)">{errors.email}</span>{/if}
           </label>
 
           {#if savingPlan}<div class="rounded-xl p-4 text-sm" style="background:var(--brand-soft)"><strong>Referencia de tu plan:</strong> deuda estimada de ${savingPlan.debt?.toLocaleString('es-MX')} MXN · {#if savingPlan.mode === 'monthly-payment'}plazo de {savingPlan.months} meses, pago estimado de ${savingPlan.monthlyPayment?.toLocaleString('es-MX')} MXN al mes{:else}pagando ${savingPlan.monthlyCapacity?.toLocaleString('es-MX')} MXN al mes, alrededor de {savingPlan.estimatedMonths} meses{/if}. <span class="muted">Cálculo simple sin intereses ni comisiones.</span></div>{/if}
 
+          <fieldset class="space-y-2 border-t pt-4" style="border-color:var(--border)"><legend class="font-semibold">Seguimiento</legend><label class="flex gap-3 text-sm leading-relaxed"><input class="mt-1 h-4 w-4" type="checkbox" bind:checked={whatsapp} /><span>Acepto recibir orientación por WhatsApp. Es opcional.</span></label></fieldset>
           {#if errors.submit}<p class="rounded-lg p-3 text-sm" role="alert" style="background:var(--brand-soft);color:var(--danger)">{errors.submit}</p>{/if}
           <div class="flex flex-col gap-3 sm:flex-row"><button class="btn-secondary focus-ring" type="button" onclick={() => step = 1} disabled={sending}><span class="button-label">Regresar</span></button><button class="btn-primary focus-ring" type="submit" disabled={sending}><span class="button-label">{sending ? 'Enviando prueba…' : 'Enviar solicitud'}</span></button></div>
           <p class="muted text-xs">Los datos de calificación se quedan en este prototipo. El envío real y almacenamiento de solicitudes requiere conectar el backend de producción.</p>
