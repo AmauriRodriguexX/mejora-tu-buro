@@ -1,8 +1,8 @@
 <script>
   import { onMount, tick } from 'svelte';
   import { getThemePreference, watchSystemTheme } from './lib/themePreference.js';
-  import Navbar from './lib/Navbar.svelte'; import Hero from './lib/Hero.svelte'; import Opiniones from './lib/Opiniones.svelte'; import TrustBanner from './lib/TrustBanner.svelte'; import Calculator from './lib/Calculator.svelte'; import HowItWorks from './lib/HowItWorks.svelte'; import Guarantees from './lib/Guarantees.svelte'; import StepWizard from './lib/StepWizard.svelte'; import Faq from './lib/Faq.svelte'; import BlogPreview from './lib/BlogPreview.svelte'; import Footer from './lib/Footer.svelte'; import RoutePage from './lib/RoutePage.svelte'; import CookieBanner from './lib/CookieBanner.svelte'; import MobileBottomNav from './lib/MobileBottomNav.svelte';
-  let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference()); let selectedSituations = $state([]); let savingPlan = $state(null);
+  import Navbar from './lib/Navbar.svelte'; import Hero from './lib/Hero.svelte'; import Opiniones from './lib/Opiniones.svelte'; import TrustBanner from './lib/TrustBanner.svelte'; import Calculator from './lib/Calculator.svelte'; import HowItWorks from './lib/HowItWorks.svelte'; import Guarantees from './lib/Guarantees.svelte'; import Faq from './lib/Faq.svelte'; import BlogPreview from './lib/BlogPreview.svelte'; import Footer from './lib/Footer.svelte'; import RoutePage from './lib/RoutePage.svelte'; import CookieBanner from './lib/CookieBanner.svelte'; import MobileBottomNav from './lib/MobileBottomNav.svelte';
+  let theme = $state(typeof window === 'undefined' ? 'light' : getThemePreference()); let savingPlan = $state(null);
   const routePaths = ['/como-funciona','/calculadora','/testimonios','/acerca-de','/entradas','/entradas/categoria','/entradas/categoria/titulo-del-post','/legal','/terminos-y-condiciones','/aviso-de-privacidad','/politica-de-cookies','/derechos-arco'];
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
   let currentRoute = $state('/');
@@ -14,30 +14,18 @@
     const path = relativePath.replace(/\/+$/, '') || '/';
     return routePaths.includes(path) || path.startsWith('/entradas/categoria/') || /^\/entradas\/[^/]+\/[^/]+$/.test(path) ? path : '/';
   }
-  function startCase(situation = [], contact = null) { selectedSituations = situation; document.dispatchEvent(new CustomEvent('open-form', { detail: { situation, contact } })); }
   onMount(() => {
     theme = getThemePreference();
     const unwatchSystemTheme = watchSystemTheme((nextTheme) => theme = nextTheme);
     currentRoute = getRoute();
     const onPopState = () => currentRoute = getRoute();
-    async function handleFormAnchor(event) {
-      const link = event.target.closest?.('a[href*="#formulario-captacion"]');
-      if (!link || new URL(link.href, window.location.href).origin !== window.location.origin) return;
-      event.preventDefault();
-      const target = new URL(link.href, window.location.href);
-      if (currentRoute !== '/') {
-        history.pushState({}, '', `${target.pathname}${target.hash}`);
-        currentRoute = '/';
-        await tick();
-      } else {
-        history.pushState({}, '', `${target.pathname}${target.hash}`);
-      }
+    // The form lives in the hero: go all the way to the top so headline and form are seen whole.
+    function goToForm() {
       const form = document.getElementById('formulario-captacion');
       if (!form) return;
-      // The form lives in the hero: go all the way to the top so headline and form are seen whole.
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const spotlight = () => {
-        form.querySelector('#hero-situation-0')?.focus({ preventScroll: true });
+        form.querySelector('input, select, summary')?.focus({ preventScroll: true });
         form.classList.remove('is-spotlight');
         void form.offsetWidth;
         form.classList.add('is-spotlight');
@@ -52,9 +40,25 @@
       setTimeout(land, reduceMotion ? 50 : 1200);
       window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     }
+    async function handleFormAnchor(event) {
+      const link = event.target.closest?.('a[href*="#formulario-captacion"]');
+      if (!link || new URL(link.href, window.location.href).origin !== window.location.origin) return;
+      event.preventDefault();
+      const target = new URL(link.href, window.location.href);
+      if (currentRoute !== '/') {
+        history.pushState({}, '', `${target.pathname}${target.hash}`);
+        currentRoute = '/';
+        await tick();
+      } else {
+        history.pushState({}, '', `${target.pathname}${target.hash}`);
+      }
+      goToForm();
+    }
     document.addEventListener('click', handleFormAnchor);
+    // The calculator hands its plan to the form and asks to bring it into view.
+    document.addEventListener('open-form', goToForm);
     window.addEventListener('popstate', onPopState);
-    if (currentRoute !== '/') return () => { document.removeEventListener('click', handleFormAnchor); window.removeEventListener('popstate', onPopState); unwatchSystemTheme(); };
+    if (currentRoute !== '/') return () => { document.removeEventListener('click', handleFormAnchor); document.removeEventListener('open-form', goToForm); window.removeEventListener('popstate', onPopState); unwatchSystemTheme(); };
     document.getElementById('debt')?.setAttribute('inputmode','decimal');
     function updatePointer(event) {
       const button = event.target.closest?.('.btn-primary, .btn-secondary');
@@ -90,7 +94,7 @@
     revealTargets.forEach((section, index) => { section.classList.add('scroll-reveal'); section.style.setProperty('--reveal-delay', `${Math.min(index * 70, 280)}ms`); });
     const revealObserver = reduce ? null : new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); revealObserver?.unobserve(entry.target); } }), { threshold: .14, rootMargin: '0px 0px -8% 0px' });
     if (revealObserver) revealTargets.forEach((section) => revealObserver.observe(section)); else revealTargets.forEach((section) => section.classList.add('is-visible'));
-    return () => { document.removeEventListener('click', handleFormAnchor); window.removeEventListener('popstate', onPopState); document.removeEventListener('pointermove', updatePointer); document.removeEventListener('input', formatDebt); document.removeEventListener('blur', finalizeDebt, true); revealObserver?.disconnect(); unwatchSystemTheme(); };
+    return () => { document.removeEventListener('click', handleFormAnchor); document.removeEventListener('open-form', goToForm); window.removeEventListener('popstate', onPopState); document.removeEventListener('pointermove', updatePointer); document.removeEventListener('input', formatDebt); document.removeEventListener('blur', finalizeDebt, true); revealObserver?.disconnect(); unwatchSystemTheme(); };
   });
 </script>
-{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar {theme} /><main id="contenido"><Hero onStart={startCase} onSelect={(situation) => selectedSituations=situation} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><StepWizard {selectedSituations} {savingPlan} /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />
+{#if currentRoute === '/'}<div class:theme-dark={theme === 'dark'} class="site"><a class="skip-link" href="#contenido">Ir al contenido</a><Navbar {theme} /><main id="contenido"><Hero {savingPlan} /><Opiniones /><TrustBanner /><HowItWorks /><Calculator bind:savingPlan /><Guarantees /><Faq /><BlogPreview /></main><Footer bind:theme /><MobileBottomNav /></div>{:else}<RoutePage route={currentRoute} />{/if}<CookieBanner />

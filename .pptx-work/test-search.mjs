@@ -1,0 +1,31 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ headless:true, executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe' });
+const errs=[];
+for (const [n,w,h,touch] of [['desktop',1440,900,false],['mobile',390,844,true]]) {
+  const ctx = await b.newContext({ viewport:{width:w,height:h}, hasTouch:touch, isMobile:touch });
+  const p = await ctx.newPage(); p.on('pageerror',e=>errs.push(n+': '+e.message));
+  await p.goto('http://127.0.0.1:5173/',{waitUntil:'networkidle'});
+  await p.evaluate(()=>localStorage.setItem('mb-cookie-consent','rejected')); await p.reload({waitUntil:'networkidle'});
+  await p.locator('.situation-chip',{hasText:'Pagos atrasados'}).click();
+  await p.locator('#hero-name').fill('Ana'); await p.locator('#hero-phone').click(); await p.keyboard.type('5512345678'); await p.locator('#hero-privacy').check();
+  await p.getByRole('button',{name:/Continuar con mi caso/}).click(); await p.waitForTimeout(400);
+  await p.locator('#hero-institutions').click(); await p.waitForTimeout(200);
+  const vis = () => p.evaluate(()=>[...document.querySelectorAll('.institution-picker-options .institution-picker-option')].map(e=>e.textContent.trim()));
+  console.log(n,'focus on open:', await p.evaluate(()=>document.activeElement.type || document.activeElement.tagName), 'options:', (await vis()).length);
+  const search = p.locator('.institution-search input');
+  await search.fill('banamex'); console.log(n,'banamex ->', JSON.stringify(await vis()));
+  await search.fill('ELEKTRA'); console.log(n,'ELEKTRA ->', JSON.stringify(await vis()));
+  await search.fill('economico'); console.log(n,'economico ->', JSON.stringify(await vis()));
+  await p.locator('.institution-picker-option',{hasText:'Apoyo Económico'}).click();
+  await search.fill('xyz'); console.log(n,'xyz ->', JSON.stringify(await vis()), await p.locator('.institution-empty').innerText());
+  await search.fill('co');
+  await p.screenshot({path:'C:/Users/Amauri/AppData/Local/Temp/claude/D--t2o-carpet-especial-mejora-tu-buro-mejora-tu-buro/07e66327-91f7-4a14-ba0e-0b6b83073b6e/scratchpad/search-'+n+'.png'});
+  console.log(n,'count:', await p.locator('.institution-count').innerText());
+  await search.press('Enter'); console.log(n,'enter keeps open:', await p.locator('#hero-institutions').evaluate(e=>e.parentElement.open), 'step still 2:', await p.locator('#hero-debt').count());
+  await search.press('Escape'); await p.waitForTimeout(100);
+  console.log(n,'escape closed:', !(await p.locator('#hero-institutions').evaluate(e=>e.parentElement.open)), 'focus:', await p.evaluate(()=>document.activeElement.id), 'applied?', await p.locator('#hero-institutions-value').innerText());
+  await p.locator('#hero-institutions').click(); await p.waitForTimeout(150);
+  console.log(n,'reopen query reset:', JSON.stringify(await search.inputValue()), 'draft kept from applied:', await p.locator('.institution-count').innerText());
+  await ctx.close();
+}
+console.log('errors', JSON.stringify(errs)); await b.close();
