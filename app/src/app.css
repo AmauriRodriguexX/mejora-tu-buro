@@ -270,6 +270,18 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
 .hero-done-icon { display:grid; width:3.25rem; height:3.25rem; place-items:center; border-radius:50%; background:var(--brand-soft); color:var(--brand); font-size:1.5rem; font-weight:800; }
 .hero-done h2 { margin:.25rem 0 0; font-size:1.35rem; font-weight:800; outline:none; }
 .hero-done p { max-width:30rem; margin:0; font-size:.9375rem; line-height:1.5; }
+.hero-done-action { margin-top:.4rem; min-width:14rem; }
+/* The Lottie is 16:9 with a centred circle ~80% of its height: clip the empty side bands so the frame is only as wide as the art. */
+.hero-done-animation { position:relative; display:grid; width:9rem; height:8rem; place-items:center; overflow:hidden; }
+.hero-done-animation canvas { position:absolute; top:50%; left:50%; width:14.25rem; height:8rem; transform:translate(-50%,-50%); opacity:0; transition:opacity .2s ease; }
+/* Centred confirmation also on phones (overrides the global left alignment for mobile copy). */
+.hero-done :is(h2,p) { text-align:center!important; }
+.hero-done strong { white-space:nowrap; }
+.hero-done-animation.is-ready canvas { opacity:1; }
+.hero-done-animation.is-ready .hero-done-icon { display:none; }
+.hero-done .hero-done-hint { color:var(--muted); font-size:.8125rem; }
+.hero-whatsapp-note { display:flex; align-items:center; justify-content:center; gap:.35rem; }
+.hero-whatsapp-note svg { flex:none; color:var(--success); }
 .hero-form-permissions { display:grid; gap:.38rem; }
 .hero-permission { display:flex; align-items:flex-start; gap:.5rem; font-size:.8125rem; line-height:1.4; }
 .hero-permission input { width:1.1rem; height:1.1rem; flex:none; margin-top:.1rem; accent-color:var(--brand); }
@@ -365,3 +377,27 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
 @media (min-width:901px) { .mobile-bottom-nav { display:none; } }
 @media (prefers-reduced-motion:reduce) { .menu-toggle span,.mobile-nav-arrow,.sidebar-close span { transition:none; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important;transition-duration:.01ms!important;animation:none!important } .typing-caret { display:none; } }
+/* Calculator side column (desktop): reading guide + real Google reviews. Hidden on smaller screens so mobile stays short. */
+.calc-aside { display:none; }
+@media (min-width:1024px) {
+  .calc-aside { display:grid; gap:1rem; margin-top:1.5rem; }
+  .calc-steps { display:grid; gap:.6rem; margin:0; padding:0; list-style:none; counter-reset:calc-step; }
+  .calc-steps li { position:relative; padding-left:2.5rem; color:var(--muted); font-size:.9375rem; line-height:1.5; counter-increment:calc-step; }
+  .calc-steps li::before { content:counter(calc-step); position:absolute; top:.05rem; left:0; display:grid; width:1.65rem; height:1.65rem; place-items:center; border-radius:50%; background:var(--brand-soft); color:var(--brand); font-size:.8125rem; font-weight:800; }
+  .calc-steps strong { color:var(--text); }
+  .calc-reviews { display:grid; gap:.75rem; }
+  .calc-review { margin:0; padding:1.1rem 1.2rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface-raised); }
+  .calc-review blockquote { margin:0; }
+  .calc-review p { margin:0; color:var(--text); font-size:.9375rem; line-height:1.55; }
+  .calc-review figcaption { display:flex; align-items:center; gap:.6rem; margin-top:.8rem; font-size:.8125rem; line-height:1.25; }
+  .calc-review figcaption span:last-child { display:grid; }
+  .calc-review small { color:var(--muted); font-size:.75rem; }
+  .calc-review-avatar { display:grid; width:2rem; height:2rem; flex:none; place-items:center; border-radius:50%; background:var(--brand-soft); color:var(--brand); font-weight:800; }
+  /* Narrow desktop: one review keeps the column no taller than the calculator. */
+}
+@media (min-width:1024px) and (max-width:1279px) {
+  .calc-review:nth-child(n+2) { display:none; }
+}
+@media (min-width:1024px) {
+  .calc-reviews-link { justify-self:start; color:var(--brand); font-size:.875rem; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+}

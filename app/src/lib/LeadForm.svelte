@@ -1,7 +1,10 @@
 <script>
-  import { tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { fly } from 'svelte/transition';
   import { situations, situationLabels } from './situations.js';
+  import { captureAttribution, getAttribution, newClickId } from './attribution.js';
+  import sendMessageAnimation from '../assets/send-message.lottie?url';
+  import lottieWasm from '@lottiefiles/dotlottie-web/dotlottie-player.wasm?url';
 
   let { savingPlan = null } = $props();
   let step = $state(1);
@@ -14,14 +17,39 @@
   let draftInstitutions = $state([]);
   let institutionQuery = $state('');
   let email = $state('');
-  let whatsapp = $state(false);
   let errors = $state({});
   let sending = $state(false);
-  let messageSent = $state(false);
+  // 'sent': the bot confirmed the WhatsApp message; 'prototype': no lead endpoint configured (static preview).
+  let outcome = $state('');
+  let clickId = '';
   let card;
   let institutionPicker;
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  // Prototype by default: without VITE_LEAD_ENDPOINT the form always ends on the confirmation and sends nothing.
+  // The backend (lead + WhatsApp bot) plugs in by setting it, e.g. /api/test-lead for the local webhook.
+  const leadEndpoint = import.meta.env.VITE_LEAD_ENDPOINT || '';
+  const whatsappNumber = (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
+  const firstName = $derived(name.trim().split(/\s+/)[0]);
+  const whatsappLink = $derived(whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(`Hola, soy ${firstName}. Envié mi solicitud en Mejora Buró. Ref: ${clickId.slice(0, 8)}`)}` : '');
+
+  onMount(() => { captureAttribution(); });
+
+  // Confirmation animation: the player (and its wasm, self-hosted) is only downloaded once someone reaches this step.
+  // Reduced motion shows the final frame; any load failure falls back to the static check icon.
+  let animationReady = $state(false);
+  function sendAnimation(canvas) {
+    let player;
+    let cancelled = false;
+    import('@lottiefiles/dotlottie-web').then(({ DotLottie }) => {
+      if (cancelled) return;
+      DotLottie.setWasmUrl(lottieWasm);
+      player = new DotLottie({ canvas, src: sendMessageAnimation, autoplay: !reduceMotion, loop: false, layout: { fit: 'contain', align: [0.5, 0.5] } });
+      player.addEventListener('load', () => { animationReady = true; if (reduceMotion) player.setFrame(player.totalFrames - 1); });
+      player.addEventListener('loadError', () => { animationReady = false; });
+    }).catch(() => { animationReady = false; });
+    return { destroy() { cancelled = true; animationReady = false; player?.destroy(); } };
+  }
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stepIn = { y: 10, duration: reduceMotion ? 0 : 240 };
   const debtRanges = ['$20,000 - $40,000', '$41,000 - $99,000', '$100,000 - $249,999', 'Más de $250,000', 'No estoy seguro'];
@@ -43,7 +71,7 @@
     situation: () => selectedSituations.length ? '' : 'Marca al menos una opción. Si ninguna encaja, elige «Otra situación».',
     name: () => { const value = name.trim(); if (!value) return 'Escribe tu nombre.'; if (!/^[\p{L}][\p{L}\s'.-]*$/u.test(value)) return 'Usa solo letras en tu nombre.'; return value.length < 2 ? 'Escribe al menos 2 letras.' : ''; },
     phone: () => { const digits = phone.replace(/\D/g, '').length; if (!digits) return 'Escribe tu celular a 10 dígitos.'; return digits < 10 ? `Te falta${10 - digits === 1 ? '' : 'n'} ${10 - digits} dígito${10 - digits === 1 ? '' : 's'}.` : ''; },
-    privacy: () => privacy ? '' : 'Acepta el Aviso de Privacidad y los Términos para continuar.',
+    privacy: () => privacy ? '' : 'Acepta para continuar: te daremos seguimiento por WhatsApp.',
     debt: () => debt ? '' : 'Elige un rango o «No estoy seguro».',
     institution: () => institutions.length ? '' : 'Elige al menos una institución o «No estoy seguro».',
     email: () => !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? '' : 'Revisa el formato del correo.'
@@ -170,28 +198,36 @@
   async function submitDetails(event) {
     event.preventDefault();
     if (!(await validateStep(2))) return;
-    messageSent = false;
-    if (whatsapp) {
-      if (!import.meta.env.DEV) {
-        errors = { submit: 'El envío de solicitudes aún no está habilitado en la versión publicada.' };
-        return;
-      }
-      sending = true;
-      try {
-        const response = await fetch('/api/test-lead', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // The prototype endpoint only sends a WhatsApp test; lead details stay in the browser.
-          body: JSON.stringify({ phone, privacyAccepted: privacy, whatsappConsent: whatsapp })
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) { errors = { submit: result.error || 'No pudimos enviar el mensaje de prueba por WhatsApp.' }; return; }
-        messageSent = true;
-      } catch {
-        errors = { submit: 'No se pudo conectar con el servidor local. Comprueba que el webhook esté iniciado e inténtalo de nuevo.' };
-        return;
-      } finally { sending = false; }
-    }
+    errors = {};
+    if (!leadEndpoint) { outcome = 'prototype'; goToStep(3, 'hero-done-title'); return; }
+    clickId = newClickId();
+    sending = true;
+    try {
+      const response = await fetch(leadEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Consent to WhatsApp contact is part of the required step-1 checkbox, so every lead starts the bot.
+        body: JSON.stringify({
+          click_id: clickId,
+          phone,
+          name: name.trim(),
+          email: email.trim(),
+          situations: selectedSituations,
+          debt,
+          institutions,
+          savingPlan,
+          privacyAccepted: privacy,
+          whatsappConsent: privacy,
+          attribution: getAttribution()
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) { errors = { submit: result.error || 'No pudimos enviarte el WhatsApp. Inténtalo de nuevo en unos segundos.' }; return; }
+      outcome = 'sent';
+    } catch {
+      errors = { submit: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.' };
+      return;
+    } finally { sending = false; }
     goToStep(3, 'hero-done-title');
   }
 
@@ -224,7 +260,7 @@
           </div>
 
           <div class="hero-form-permissions">
-            <label class="hero-permission"><input id="hero-privacy" type="checkbox" bind:checked={privacy} onchange={() => validateField('privacy')} aria-invalid={!!errors.privacy} aria-describedby={errors.privacy ? 'hero-privacy-error' : undefined} /><span>Acepto el <a href={`${base}/aviso-de-privacidad/`}>Aviso de Privacidad</a> y los <a href={`${base}/terminos-y-condiciones/`}>Términos</a>.</span></label>
+            <label class="hero-permission"><input id="hero-privacy" type="checkbox" bind:checked={privacy} onchange={() => validateField('privacy')} aria-invalid={!!errors.privacy} aria-describedby={errors.privacy ? 'hero-privacy-error' : undefined} /><span>Acepto el <a href={`${base}/aviso-de-privacidad/`}>Aviso de Privacidad</a>, los <a href={`${base}/terminos-y-condiciones/`}>Términos</a> y que me contacten por WhatsApp.</span></label>
             {#if errors.privacy}<span id="hero-privacy-error" class="hero-field-error" role="alert">{errors.privacy}</span>{/if}
           </div>
           <button class="btn-primary focus-ring hero-submit" type="submit"><span class="button-label">Continuar con mi caso</span><span aria-hidden="true">→</span></button>
@@ -258,7 +294,7 @@
                     </div>
                   {/each}
                   <div class="institution-picker-group"><label class="institution-picker-option"><input type="checkbox" checked={draftInstitutions.includes('No estoy seguro')} onchange={() => toggleInstitution('No estoy seguro')} /><span>No estoy seguro</span></label></div>
-                  <div class="institution-picker-actions"><span class="institution-count" aria-live="polite" aria-atomic="true">{draftInstitutions.length ? `${draftInstitutions.length} seleccionada${draftInstitutions.length === 1 ? '' : 's'}` : 'Marca todas las que apliquen'}</span><button type="button" class="btn-primary focus-ring" onclick={applyInstitutionSelection}><span class="button-label">Aplicar selección</span></button></div>
+                  <div class="institution-picker-actions"><span class="institution-count" aria-live="polite" aria-atomic="true">{draftInstitutions.length ? `${draftInstitutions.length} seleccionada${draftInstitutions.length === 1 ? '' : 's'}` : 'Marca todas las que apliquen'}</span><button type="button" class="btn-primary focus-ring" onclick={applyInstitutionSelection}><span class="button-label">Seleccionar</span></button></div>
                 </div>
               </details>
               {#if errors.institution}<span id="hero-institution-error" class="hero-field-error" role="alert">{errors.institution}</span>{/if}
@@ -269,19 +305,20 @@
 
           {#if savingPlan}<p class="hero-plan-note"><strong>Tu plan de la calculadora:</strong> deuda de ${savingPlan.debt?.toLocaleString('es-MX')} MXN · {#if savingPlan.mode === 'monthly-payment'}{savingPlan.months} meses de ${savingPlan.monthlyPayment?.toLocaleString('es-MX')} MXN{:else}${savingPlan.monthlyCapacity?.toLocaleString('es-MX')} MXN al mes, unos {savingPlan.estimatedMonths} meses{/if}. <span class="muted">Cálculo simple sin intereses ni comisiones.</span></p>{/if}
 
-          <label class="hero-permission"><input type="checkbox" bind:checked={whatsapp} /><span>Quiero recibir orientación por WhatsApp <span class="muted">(opcional)</span></span></label>
           {#if errors.submit}<p class="hero-field-error" role="alert">{errors.submit}</p>{/if}
           <div class="hero-step-actions">
             <button class="btn-secondary focus-ring" type="button" onclick={() => goToStep(1, 'hero-name')} disabled={sending}><span class="button-label">Regresar</span></button>
-            <button class="btn-primary focus-ring hero-submit" type="submit" disabled={sending}><span class="button-label">{sending ? 'Enviando…' : 'Enviar solicitud'}</span></button>
+            <button class="btn-primary focus-ring hero-submit" type="submit" disabled={sending}><span class="button-label">{sending ? 'Enviando…' : 'Enviar solicitud'}</span>{#if !sending}<span aria-hidden="true">→</span>{/if}</button>
           </div>
-          <p class="hero-form-note">Prototipo: la solicitud no se guarda hasta conectar el envío de producción.</p>
+          <p class="hero-form-note hero-whatsapp-note"><svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /></svg>Al enviar, te escribimos por WhatsApp al {phone}.</p>
         </form>
       {:else}
         <div class="hero-step hero-done" role="status">
-          <span class="hero-done-icon" aria-hidden="true">✓</span>
-          <h2 id="hero-done-title" tabindex="-1">{messageSent ? 'Mensaje de prueba enviado' : `Gracias, ${name.trim().split(/\s+/)[0]}`}</h2>
-          <p class="muted">{#if messageSent}Enviamos una confirmación de prueba por WhatsApp. El prototipo no guarda tus datos ni envía los detalles del caso.{:else}Completaste la solicitud de prueba. Esta versión no envía ni guarda los datos; en producción un asesor te contactará al {phone}.{/if}</p>
+          <div class="hero-done-animation" class:is-ready={animationReady} aria-hidden="true"><canvas use:sendAnimation width="640" height="360"></canvas><span class="hero-done-icon">✓</span></div>
+          <h2 id="hero-done-title" tabindex="-1">¡Listo, {firstName}! Recibimos tu información</h2>
+          <p class="muted">Te escribiremos por WhatsApp al <strong>{phone}</strong>. Respóndenos ahí para continuar con la revisión de tu caso.</p>
+          {#if outcome === 'sent' && whatsappLink}<a class="btn-primary focus-ring hero-done-action" href={whatsappLink} target="_blank" rel="noopener"><span class="button-label">Abrir WhatsApp</span></a>{/if}
+          <p class="hero-done-hint">¿El número no es correcto? <button class="hero-link-button focus-ring" type="button" onclick={() => { outcome = ''; goToStep(1, 'hero-phone'); }}>Corregir celular</button></p>
         </div>
       {/if}
     </div>

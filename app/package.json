@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@lottiefiles/dotlottie-web": "^0.80.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "lucide-svelte": "^1.0.1",

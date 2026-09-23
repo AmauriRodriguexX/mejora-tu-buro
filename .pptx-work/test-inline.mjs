@@ -28,7 +28,7 @@ for (const [n,w,h] of [['desktop',1440,900],['mobile',390,844]]) {
   await p.locator('.institution-picker-option',{hasText:'Coppel / Bancoppel'}).click();
   await p.locator('.institution-picker-option',{hasText:'BBVA Bancomer'}).click();
   if(n==='mobile') await p.screenshot({path:'C:/Users/Amauri/AppData/Local/Temp/claude/D--t2o-carpet-especial-mejora-tu-buro-mejora-tu-buro/07e66327-91f7-4a14-ba0e-0b6b83073b6e/scratchpad/step2-picker-mobile.png'});
-  await p.getByRole('button',{name:'Aplicar selección'}).click(); await p.waitForTimeout(150);
+  await p.getByRole('button',{name:'Seleccionar'}).click(); await p.waitForTimeout(150);
   console.log(n,'institutions summary:', await p.locator('#hero-institutions-value').innerText(), 'errors now:', JSON.stringify(await p.locator(card+' .hero-field-error').allInnerTexts()));
   await p.locator('#hero-email').fill('ana@'); await p.locator('#hero-debt').focus();
   console.log(n,'email blur error:', JSON.stringify(await p.locator(card+' .hero-field-error').allInnerTexts()));

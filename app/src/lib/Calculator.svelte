@@ -7,6 +7,11 @@
   let months = $state(12);
   let monthlyCapacity = $state(6000);
 
+  // Verbatim excerpts (… marks cuts) copied from the public Google reviews on 2026-09-23; surnames abbreviated.
+  const reviews = [
+    { name: 'Ubaldo P.', quote: 'Hasta ahora la atención del asesor de servicio al cliente ha sido muy atenta y clara. Guiándome para tomar medidas y reducir el acoso. Me ha dado más tranquilidad.' },
+    { name: 'Alan M.', quote: '…el trato ha sido muy bueno y bastante personalizado. Desde que los contacté me explicaron todo de manera clara y me han acompañado durante todo el proceso, siempre atentos y resolviendo dudas.' }
+  ];
   const money = (value) => Number(value || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 });
   const bounded = (value, min, max) => Math.min(max, Math.max(min, Number(value) || min));
   let debtAmount = $derived(bounded(debt, 20000, 5000000));
@@ -37,9 +42,27 @@
       <p class="eyebrow">Calculadora orientativa</p>
       <h2 class="mt-3 text-3xl font-extrabold sm:text-4xl">Arma un plan para resolver tu deuda</h2>
       <p class="muted mt-4 leading-relaxed">Explora un plazo o una mensualidad que se ajuste a ti. Es una operación estimada sobre el saldo que indiques, no una propuesta de negociación ni una garantía de liquidación.</p>
+
+      <!-- Desktop only: fills the column beside the calculator. Quotes are verbatim excerpts from the public Google profile. -->
+      <aside class="calc-aside" aria-label="Antes de decidir">
+        <ol class="calc-steps">
+          <li><strong>Es una referencia.</strong> Divide tu saldo entre el plazo, sin intereses ni comisiones.</li>
+          <li><strong>Un asesor revisa tu caso.</strong> Te explica qué alternativas aplican a tu situación.</li>
+          <li><strong>Sin compromiso.</strong> La primera conversación no te obliga a nada.</li>
+        </ol>
+        <div class="calc-reviews">
+          {#each reviews as review}
+            <figure class="calc-review">
+              <blockquote><p>“{review.quote}”</p></blockquote>
+              <figcaption><span class="calc-review-avatar" aria-hidden="true">{review.name[0]}</span><span><strong>{review.name}</strong><small>Reseña en Google</small></span></figcaption>
+            </figure>
+          {/each}
+        </div>
+        <a class="calc-reviews-link focus-ring" href="https://www.google.com/search?kgmid=/g/11td0z9l8p&hl=es-419&q=Mejora+Buró" target="_blank" rel="noreferrer">Ver las 4,924 opiniones en Google ↗</a>
+      </aside>
     </div>
 
-    <div class="card rounded-2xl p-6 sm:p-8">
+    <div class="card rounded-2xl p-6 sm:p-8 lg:self-start">
       <div class="calc-mode-switch" role="group" aria-label="Tipo de cálculo">
         <button type="button" class:active={mode === 'monthly-payment'} aria-pressed={mode === 'monthly-payment'} onclick={() => mode = 'monthly-payment'}>Calcular mensualidad</button>
         <button type="button" class:active={mode === 'payoff-time'} aria-pressed={mode === 'payoff-time'} onclick={() => mode = 'payoff-time'}>Calcular tiempo</button>
