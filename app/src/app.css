@@ -313,6 +313,10 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
   .site-footer .mt-12 { margin-top:1.5rem; gap:1.75rem; }
   .site-footer .mt-4.grid > a { display:flex; min-height:2.5rem; align-items:center; }
 }
+@media (max-width:900px) {
+  /* Keep the footer appearance controls clear of the fixed mobile quick-nav. */
+  .site-footer > div:last-child { padding-bottom:calc(5.75rem + env(safe-area-inset-bottom)); }
+}
 @media (max-width:640px) {
   :where(.site,.route-page) :is(h1,h2,h3,h4,h5,p,li,label,blockquote,figcaption,dt,dd) { text-align:left!important; }
   .hero-content { padding:1rem 1rem 1.2rem; }
