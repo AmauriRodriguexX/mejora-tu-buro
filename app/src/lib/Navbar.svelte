@@ -9,7 +9,7 @@
   function close(){ open=false; }
 </script>
 
-<header class="site-header sticky top-0 z-50 border-b" style="background:color-mix(in srgb,var(--bg) 94%,transparent);border-color:var(--border)">
+<header class="site-header sticky top-0 z-50 border-b" class:menu-open={open} style="background:color-mix(in srgb,var(--bg) 94%,transparent);border-color:var(--border)">
   <div class="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
     <a href={`${home}#hero`} class="brand-logo-link flex items-center" aria-label="Mejora Buró, inicio"><img class="brand-logo" width="69" height="50" src={theme === 'dark' ? 'https://mejoraburo.com.mx/wp-content/uploads/2022/05/Mejora_buro-white-logo.png' : 'https://mejoraburo.com.mx/wp-content/uploads/2022/05/Mejora_buro-logo.png'} alt="Mejora Buró" decoding="async" /></a>
     <nav class="desktop-navigation hidden items-center gap-6 text-sm font-semibold md:flex" aria-label="Principal">{#each links as link}<a class="nav-link" href={path(link[0])}>{link[1]}</a>{/each}<a class="nav-link" href={path('/entradas')}>Blog</a></nav>
