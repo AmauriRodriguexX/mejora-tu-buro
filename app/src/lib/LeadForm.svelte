@@ -1,29 +1,22 @@
 <script>
   import { onMount, tick } from 'svelte';
   import { fly } from 'svelte/transition';
-  import { situations, situationLabels } from './situations.js';
   import { captureAttribution, getAttribution, newClickId } from './attribution.js';
   import sendMessageAnimation from '../assets/send-message.lottie?url';
   import lottieWasm from '@lottiefiles/dotlottie-web/dotlottie-player.wasm?url';
 
   let { savingPlan = null } = $props();
   let step = $state(1);
-  let selectedSituations = $state([]);
   let name = $state('');
   let phone = $state('');
-  let privacy = $state(false);
-  let debt = $state('');
-  let institutions = $state([]);
-  let draftInstitutions = $state([]);
-  let institutionQuery = $state('');
   let email = $state('');
+  let privacy = $state(false);
   let errors = $state({});
   let sending = $state(false);
   // 'sent': the bot confirmed the WhatsApp message; 'prototype': no lead endpoint configured (static preview).
   let outcome = $state('');
   let clickId = '';
   let card;
-  let institutionPicker;
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   // Prototype by default: without VITE_LEAD_ENDPOINT the form always ends on the confirmation and sends nothing.
@@ -52,49 +45,32 @@
   }
   const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const stepIn = { y: 10, duration: reduceMotion ? 0 : 240 };
-  const debtRanges = ['$20,000 - $40,000', '$41,000 - $99,000', '$100,000 - $249,999', 'Más de $250,000', 'No estoy seguro'];
-  const institutionGroups = [
-    { label: 'Departamentales', options: ['Coppel / Bancoppel', 'Elektra / Banco Azteca', 'Liverpool', 'Palacio de Hierro', 'Sears', 'Suburbia', 'Sanborns', 'C&A / Bradescard', 'Otras departamentales'] },
-    { label: 'Bancos', options: ['BBVA Bancomer', 'Santander', 'Banorte', 'HSBC', 'Citibanamex', 'Scotiabank', 'Inbursa', 'American Express', 'Otros bancos'] },
-    { label: 'Financieras y fintech', options: ['Kueski', 'Moneyman', 'Dineria', 'Apoyo Económico', 'Nu', 'Kubo', 'Libertad', 'DIMEX', 'EXITUS', 'Vivus', 'Otras fintech o financieras'] },
-    { label: 'Compradoras de cartera', options: ['Finastrategy', 'Secorse', 'Ibkan', 'Zendere', 'Otra compradora de cartera'] }
-  ];
 
-  // The calculator already knows the amount: preselect the matching range so step 2 has one field less.
-  $effect(() => {
-    if (!savingPlan?.debt || debt) return;
-    const amount = savingPlan.debt;
-    debt = amount <= 40000 ? debtRanges[0] : amount < 100000 ? debtRanges[1] : amount < 250000 ? debtRanges[2] : debtRanges[3];
-  });
-
+  // Lead qualification (debt amount, institutions, situation) happens on WhatsApp; the form only captures contact data.
   const validators = {
-    situation: () => selectedSituations.length ? '' : 'Marca al menos una opción. Si ninguna encaja, elige «Otra situación».',
-    name: () => { const value = name.trim(); if (!value) return 'Escribe tu nombre.'; if (!/^[\p{L}][\p{L}\s'.-]*$/u.test(value)) return 'Usa solo letras en tu nombre.'; return value.length < 2 ? 'Escribe al menos 2 letras.' : ''; },
+    name:() => { const value = name.trim(); if (!value) return 'Escribe tu nombre.'; if (!/^[\p{L}][\p{L}\s'.-]*$/u.test(value)) return 'Usa solo letras en tu nombre.'; return value.length < 2 ? 'Escribe al menos 2 letras.' : ''; },
     phone: () => { const digits = phone.replace(/\D/g, '').length; if (!digits) return 'Escribe tu celular a 10 dígitos.'; return digits < 10 ? `Te falta${10 - digits === 1 ? '' : 'n'} ${10 - digits} dígito${10 - digits === 1 ? '' : 's'}.` : ''; },
-    privacy: () => privacy ? '' : 'Acepta para continuar: te daremos seguimiento por WhatsApp.',
-    debt: () => debt ? '' : 'Elige un rango o «No estoy seguro».',
-    institution: () => institutions.length ? '' : 'Elige al menos una institución o «No estoy seguro».',
-    email: () => !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ? '' : 'Revisa el formato del correo.'
+    email: () => { const value = email.trim(); if (!value) return 'Escribe tu correo.'; return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Revisa el formato del correo.'; },
+    privacy: () => privacy ? '' : 'Acepta para continuar: te daremos seguimiento por WhatsApp.'
   };
-  const stepFields = { 1: ['situation', 'name', 'phone', 'privacy'], 2: ['debt', 'institution', 'email'] };
-  const fieldIds = { situation: 'hero-situation-0', name: 'hero-name', phone: 'hero-phone', privacy: 'hero-privacy', debt: 'hero-debt', institution: 'hero-institutions', email: 'hero-email' };
+  const fields = ['name', 'phone', 'email', 'privacy'];
+  const fieldIds = { name: 'hero-name', phone: 'hero-phone', email: 'hero-email', privacy: 'hero-privacy' };
 
   // Blur: flag only what the person already typed. While typing: re-check only fields already in error, so errors clear as soon as they are fixed.
   function validateField(field) { if (errors[field]) errors = { ...errors, [field]: validators[field]() }; }
   function blurField(field, value) { if (value.trim()) errors = { ...errors, [field]: validators[field]() }; }
 
-  async function validateStep(number) {
+  async function validateAll() {
     const nextErrors = {};
-    for (const field of stepFields[number]) { const message = validators[field](); if (message) nextErrors[field] = message; }
+    for (const field of fields) { const message = validators[field](); if (message) nextErrors[field] = message; }
     errors = nextErrors;
     if (!Object.keys(nextErrors).length) return true;
     await tick();
-    const first = stepFields[number].find((field) => nextErrors[field]);
-    document.getElementById(fieldIds[first])?.focus();
+    document.getElementById(fieldIds[fields.find((field) => nextErrors[field])])?.focus();
     return false;
   }
 
-  // Swap the card content in place; keep the card's top edge visible (below the sticky header) and move focus into the new step.
+  // Swap the card content in place; keep the card's top edge visible (below the sticky header) and move focus into the new view.
   async function goToStep(number, focusId) {
     step = number;
     await tick();
@@ -120,182 +96,23 @@
     validateField('phone');
   }
 
-  function toggleSituation(id) {
-    selectedSituations = selectedSituations.includes(id) ? selectedSituations.filter((item) => item !== id) : [...selectedSituations, id];
-    validateField('situation');
-  }
-
-  async function submitContact(event) {
+  async function submitLead(event) {
     event.preventDefault();
-    if (!(await validateStep(1))) return;
-    // Production: save a partial lead here (situation + name + phone) so a drop-off in step 2 is still reachable.
-    goToStep(2, debt ? 'hero-institutions' : 'hero-debt');
-  }
-
-  function toggleInstitution(item) {
-    if (item === 'No estoy seguro') {
-      draftInstitutions = draftInstitutions.includes(item) ? [] : [item];
-      return;
-    }
-    const known = draftInstitutions.filter((selected) => selected !== 'No estoy seguro');
-    draftInstitutions = known.includes(item) ? known.filter((selected) => selected !== item) : [...known, item];
-  }
-  function clearInstitutionSelection() { draftInstitutions = []; }
-  function applyInstitutionSelection() {
-    institutions = [...draftInstitutions];
-    validateField('institution');
-    closeInstitutionPicker();
-  }
-  function closeInstitutionPicker() {
-    if (!institutionPicker) return;
-    institutionPicker.open = false;
-    institutionPicker.querySelector('summary')?.focus();
-  }
-
-  // The options panel is moved to the page root so the card's overflow and stacking never clip it.
-  function portalInstitutionPicker(node) {
-    const panel = node.querySelector('.institution-picker-options');
-    const summary = node.querySelector('summary');
-    institutionPicker = node;
-    const placeholder = document.createComment('institution-picker-panel');
-    panel.parentNode.insertBefore(placeholder, panel);
-    const root = document.querySelector('.site') || document.body;
-    const backdrop = document.createElement('button');
-    backdrop.type = 'button';
-    backdrop.className = 'institution-picker-backdrop';
-    backdrop.setAttribute('aria-label', 'Cerrar selector de instituciones');
-    backdrop.setAttribute('aria-hidden', 'true');
-    backdrop.tabIndex = -1;
-    backdrop.hidden = true;
-    root.appendChild(backdrop);
-    root.appendChild(panel);
-    panel.setAttribute('role', 'dialog');
-    panel.setAttribute('aria-label', 'Selecciona las instituciones de tu deuda');
-    panel.hidden = true;
-    let wasOpen = false;
-    let originalBodyOverflow = null;
-    function setBackgroundLocked(locked) {
-      if (locked && originalBodyOverflow === null) {
-        originalBodyOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-      } else if (!locked && originalBodyOverflow !== null) {
-        document.body.style.overflow = originalBodyOverflow;
-        originalBodyOverflow = null;
-      }
-    }
-    function update() {
-      if (!node.open) {
-        panel.hidden = true;
-        backdrop.hidden = true;
-        panel.classList.remove('institution-picker-sheet');
-        panel.removeAttribute('aria-modal');
-        setBackgroundLocked(false);
-        if (wasOpen) { draftInstitutions = [...institutions]; institutionQuery = ''; }
-        wasOpen = false;
-        return;
-      }
-      const opening = !wasOpen;
-      if (opening) draftInstitutions = [...institutions];
-      wasOpen = true;
-      const rect = summary.getBoundingClientRect();
-      const viewport = window.visualViewport;
-      const viewportTop = viewport?.offsetTop ?? 0;
-      const viewportLeft = viewport?.offsetLeft ?? 0;
-      const viewportHeight = viewport?.height ?? window.innerHeight;
-      const viewportWidth = viewport?.width ?? window.innerWidth;
-      const viewportBottom = viewportTop + viewportHeight;
-      const placementGap = 6;
-      const viewportPadding = 8;
-      const below = viewportBottom - rect.bottom - placementGap - viewportPadding;
-      const above = rect.top - viewportTop - placementGap - viewportPadding;
-      let useSheet = viewportWidth <= 640 || viewportHeight <= 520;
-      let top = 0;
-      let left = 0;
-      let width = 0;
-      let height = 0;
-
-      if (!useSheet) {
-        const maxHeight = Math.min(320, Math.max(0, viewportHeight - 32));
-        const openBelow = below >= Math.min(220, maxHeight) || below >= above;
-        height = Math.min(maxHeight, Math.max(0, openBelow ? below : above));
-        if (height < 200) {
-          useSheet = true;
-        } else {
-          width = Math.min(Math.max(rect.width, 260), viewportWidth - 16);
-          top = openBelow ? rect.bottom + placementGap : rect.top - height - placementGap;
-          left = Math.min(Math.max(rect.left, viewportLeft + 8), viewportLeft + viewportWidth - width - 8);
-        }
-      }
-
-      if (useSheet) {
-        height = Math.max(0, Math.min(640, viewportHeight - 16));
-        top = viewportBottom - height - 8;
-        left = viewportLeft + 8;
-        width = Math.max(0, viewportWidth - 16);
-      }
-
-      panel.classList.toggle('institution-picker-sheet', useSheet);
-      if (useSheet) panel.setAttribute('aria-modal', 'true');
-      else panel.removeAttribute('aria-modal');
-      backdrop.hidden = !useSheet;
-      setBackgroundLocked(useSheet);
-      panel.hidden = false;
-      panel.style.top = `${top}px`;
-      panel.style.left = `${left}px`;
-      panel.style.width = `${width}px`;
-      panel.style.height = useSheet ? `${height}px` : '';
-      panel.style.maxHeight = `${height}px`;
-      if (opening) panel.querySelector('.institution-search input')?.focus();
-    }
-    function onPanelKey(event) {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeInstitutionPicker();
-        return;
-      }
-      if (event.key !== 'Tab' || !panel.classList.contains('institution-picker-sheet')) return;
-      const focusable = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled])')];
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-    backdrop.addEventListener('click', closeInstitutionPicker);
-    panel.addEventListener('keydown', onPanelKey);
-    node.addEventListener('toggle', update);
-    document.addEventListener('scroll', update, true);
-    window.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('scroll', update);
-    return { destroy() { setBackgroundLocked(false); backdrop.removeEventListener('click', closeInstitutionPicker); backdrop.remove(); panel.removeEventListener('keydown', onPanelKey); node.removeEventListener('toggle', update); document.removeEventListener('scroll', update, true); window.removeEventListener('resize', update); window.visualViewport?.removeEventListener('resize', update); window.visualViewport?.removeEventListener('scroll', update); placeholder.parentNode?.insertBefore(panel, placeholder); placeholder.remove(); institutionPicker = null; } };
-  }
-
-  async function submitDetails(event) {
-    event.preventDefault();
-    if (!(await validateStep(2))) return;
+    if (!(await validateAll())) return;
     errors = {};
-    if (!leadEndpoint) { outcome = 'prototype'; goToStep(3, 'hero-done-title'); return; }
+    if (!leadEndpoint) { outcome = 'prototype'; goToStep(2, 'hero-done-title'); return; }
     clickId = newClickId();
     sending = true;
     try {
       const response = await fetch(leadEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Consent to WhatsApp contact is part of the required step-1 checkbox, so every lead starts the bot.
+        // Consent to WhatsApp contact is part of the required checkbox, so every lead starts the bot.
         body: JSON.stringify({
           click_id: clickId,
           phone,
           name: name.trim(),
           email: email.trim(),
-          situations: selectedSituations,
-          debt,
-          institutions,
           savingPlan,
           privacyAccepted: privacy,
           whatsappConsent: privacy,
@@ -309,90 +126,31 @@
       errors = { submit: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.' };
       return;
     } finally { sending = false; }
-    goToStep(3, 'hero-done-title');
+    goToStep(2, 'hero-done-title');
   }
-
-  // Accent- and case-insensitive search ("banamex" finds "Citibanamex", "elektra" finds "Elektra / Banco Azteca").
-  const normalize = (text) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-  const filteredGroups = $derived.by(() => {
-    const query = normalize(institutionQuery);
-    if (!query) return institutionGroups;
-    return institutionGroups.map((group) => ({ ...group, options: group.options.filter((item) => normalize(item).includes(query)) })).filter((group) => group.options.length);
-  });
-  const institutionSummary = $derived(institutions.length === 1 ? institutions[0] : institutions.length ? `${institutions.length} instituciones` : 'Elige una o varias');
 </script>
 
 <div id="formulario-captacion" class="hero-intake-card" bind:this={card}>
   {#key step}
     <div class="hero-step-wrap" in:fly={stepIn}>
       {#if step === 1}
-        <form class="hero-step" onsubmit={submitContact} novalidate>
-          <div class="hero-form-heading"><h2 id="diagnostico-title">Cuéntanos qué te preocupa</h2><span class="hero-form-step">Paso 1 de 2</span></div>
-          <fieldset class="hero-situation-fieldset" class:has-error={!!errors.situation} aria-describedby={errors.situation ? 'situation-error' : undefined}><legend>Marca todo lo que te pase</legend>
-            <div class="hero-situations">
-              {#each situations as situation, index}<label class="situation-chip"><input id={`hero-situation-${index}`} type="checkbox" value={situation.id} checked={selectedSituations.includes(situation.id)} onchange={() => toggleSituation(situation.id)} /><span>{situation.label}</span></label>{/each}
-            </div>
-            {#if errors.situation}<span id="situation-error" class="hero-field-error" role="alert">{errors.situation}</span>{/if}
-          </fieldset>
+        <form class="hero-step" onsubmit={submitLead} novalidate>
+          <div class="hero-form-heading"><h2 id="diagnostico-title">Deja tus datos y resolvamos tus deudas juntos</h2></div>
 
           <div class="hero-contact-fields">
             <div class="hero-field"><label for="hero-name">Nombre</label><input id="hero-name" class="field" autocomplete="given-name" bind:value={name} oninput={() => validateField('name')} onblur={() => blurField('name', name)} aria-invalid={!!errors.name} aria-describedby={errors.name ? 'hero-name-error' : undefined} />{#if errors.name}<span id="hero-name-error" class="hero-field-error" role="alert">{errors.name}</span>{/if}</div>
-            <div class="hero-field"><label for="hero-phone">Celular</label><input id="hero-phone" class="field" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="55 1234 5678" value={phone} oninput={formatPhone} onblur={() => blurField('phone', phone)} aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'hero-phone-error' : undefined} />{#if errors.phone}<span id="hero-phone-error" class="hero-field-error" role="alert">{errors.phone}</span>{/if}</div>
+            <div class="hero-field"><label for="hero-phone">Celular (WhatsApp)</label><input id="hero-phone" class="field" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="55 1234 5678" value={phone} oninput={formatPhone} onblur={() => blurField('phone', phone)} aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'hero-phone-error' : undefined} />{#if errors.phone}<span id="hero-phone-error" class="hero-field-error" role="alert">{errors.phone}</span>{/if}</div>
           </div>
+          <div class="hero-field"><label for="hero-email">Correo electrónico</label><input id="hero-email" class="field" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" bind:value={email} oninput={() => validateField('email')} onblur={() => blurField('email', email)} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'hero-email-error' : undefined} />{#if errors.email}<span id="hero-email-error" class="hero-field-error" role="alert">{errors.email}</span>{/if}</div>
 
           <div class="hero-form-permissions">
             <label class="hero-permission"><input id="hero-privacy" type="checkbox" bind:checked={privacy} onchange={() => validateField('privacy')} aria-invalid={!!errors.privacy} aria-describedby={errors.privacy ? 'hero-privacy-error' : undefined} /><span>Acepto el <a href={`${base}/aviso-de-privacidad/`}>Aviso de Privacidad</a>, los <a href={`${base}/terminos-y-condiciones/`}>Términos</a> y que me contacten por WhatsApp.</span></label>
             {#if errors.privacy}<span id="hero-privacy-error" class="hero-field-error" role="alert">{errors.privacy}</span>{/if}
           </div>
-          <button class="btn-primary focus-ring hero-submit" type="submit"><span class="button-label">Continuar con mi caso</span><span aria-hidden="true">→</span></button>
-          <p class="hero-form-note">Sin compromiso · En el siguiente paso nos cuentas el monto de tu deuda.</p>
-        </form>
-      {:else if step === 2}
-        <form class="hero-step hero-step-details" onsubmit={submitDetails} novalidate>
-          <div class="hero-form-heading"><h2>Cuéntanos de tu deuda</h2><span class="hero-form-step">Paso 2 de 2</span></div>
-          <div class="hero-summary">
-            <p><strong>{name.trim()}</strong> · {phone}<span class="hero-summary-situations">{situationLabels(selectedSituations)}</span></p>
-            <button class="hero-link-button focus-ring" type="button" onclick={() => goToStep(1, 'hero-name')} disabled={sending}>Editar</button>
-          </div>
-
-          <div class="hero-contact-fields">
-            <div class="hero-field"><label for="hero-debt">Monto aproximado</label>
-              <select id="hero-debt" class="field" bind:value={debt} onchange={() => validateField('debt')} aria-invalid={!!errors.debt} aria-describedby={errors.debt ? 'hero-debt-error' : undefined}><option value="">Elige un rango</option>{#each debtRanges as range}<option value={range}>{range}</option>{/each}</select>
-              {#if errors.debt}<span id="hero-debt-error" class="hero-field-error" role="alert">{errors.debt}</span>{/if}
-            </div>
-            <div class="hero-field"><span class="hero-field-label" id="hero-institutions-label">¿Con quién tienes la deuda?</span>
-              <details use:portalInstitutionPicker class="institution-picker">
-                <summary id="hero-institutions" class="field flex cursor-pointer list-none items-center justify-between gap-3" class:is-invalid={!!errors.institution} aria-labelledby="hero-institutions-label hero-institutions-value" aria-describedby={errors.institution ? 'hero-institution-error' : undefined}><span id="hero-institutions-value" class="truncate" class:muted={!institutions.length}>{institutionSummary}</span><svg class="picker-chevron" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
-                <div class="institution-picker-options">
-                  <div class="institution-picker-toolbar">
-                    <label class="institution-search"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><span class="sr-only">Buscar institución</span><input type="search" placeholder="Buscar institución" autocomplete="off" enterkeyhint="search" bind:value={institutionQuery} onkeydown={(event) => { if (event.key === 'Enter') event.preventDefault(); }} /></label>
-                    <button type="button" class="institution-clear focus-ring" onclick={clearInstitutionSelection} disabled={!draftInstitutions.length}>Limpiar</button>
-                    <button type="button" class="institution-picker-close focus-ring" onclick={closeInstitutionPicker} aria-label="Cerrar selector de instituciones">×</button>
-                  </div>
-                  {#if !filteredGroups.length}<p class="institution-empty">No encontramos «{institutionQuery.trim()}». Elige «Otros bancos», «Otras fintech o financieras» o «No estoy seguro».</p>{/if}
-                  {#each filteredGroups as group}
-                    <div class="institution-picker-group"><p class="muted px-2 py-2 text-xs font-bold uppercase tracking-wide">{group.label}</p>
-                      {#each group.options as item}<label class="institution-picker-option"><input type="checkbox" checked={draftInstitutions.includes(item)} onchange={() => toggleInstitution(item)} /><span>{item}</span></label>{/each}
-                    </div>
-                  {/each}
-                  <div class="institution-picker-group"><label class="institution-picker-option"><input type="checkbox" checked={draftInstitutions.includes('No estoy seguro')} onchange={() => toggleInstitution('No estoy seguro')} /><span>No estoy seguro</span></label></div>
-                  <div class="institution-picker-actions"><span class="institution-count" aria-live="polite" aria-atomic="true">{draftInstitutions.length ? `${draftInstitutions.length} seleccionada${draftInstitutions.length === 1 ? '' : 's'}` : 'Marca todas las que apliquen'}</span><button type="button" class="btn-primary focus-ring" onclick={applyInstitutionSelection}><span class="button-label">Seleccionar</span></button></div>
-                </div>
-              </details>
-              {#if errors.institution}<span id="hero-institution-error" class="hero-field-error" role="alert">{errors.institution}</span>{/if}
-            </div>
-          </div>
-
-          <div class="hero-field"><label for="hero-email">Correo electrónico <span class="muted hero-optional">(opcional)</span></label><input id="hero-email" class="field" type="email" autocomplete="email" bind:value={email} oninput={() => validateField('email')} onblur={() => blurField('email', email)} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'hero-email-error' : undefined} />{#if errors.email}<span id="hero-email-error" class="hero-field-error" role="alert">{errors.email}</span>{/if}</div>
-
-          {#if savingPlan}<p class="hero-plan-note"><strong>Tu plan de la calculadora:</strong> deuda de ${savingPlan.debt?.toLocaleString('es-MX')} MXN · {#if savingPlan.mode === 'monthly-payment'}{savingPlan.months} meses de ${savingPlan.monthlyPayment?.toLocaleString('es-MX')} MXN{:else}${savingPlan.monthlyCapacity?.toLocaleString('es-MX')} MXN al mes, unos {savingPlan.estimatedMonths} meses{/if}. <span class="muted">Cálculo simple sin intereses ni comisiones.</span></p>{/if}
 
           {#if errors.submit}<p class="hero-field-error" role="alert">{errors.submit}</p>{/if}
-          <div class="hero-step-actions">
-            <button class="btn-secondary focus-ring" type="button" onclick={() => goToStep(1, 'hero-name')} disabled={sending}><span class="button-label">Regresar</span></button>
-            <button class="btn-primary focus-ring hero-submit" type="submit" disabled={sending}><span class="button-label">{sending ? 'Enviando…' : 'Enviar solicitud'}</span>{#if !sending}<span aria-hidden="true">→</span>{/if}</button>
-          </div>
-          <p class="hero-form-note hero-whatsapp-note"><svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /></svg>Al enviar, te escribimos por WhatsApp al {phone}.</p>
+          <button class="btn-primary focus-ring hero-submit" type="submit" disabled={sending}><span class="button-label">{sending ? 'Enviando…' : 'Quiero mejorar mi buró'}</span>{#if !sending}<span aria-hidden="true">→</span>{/if}</button>
+          <p class="hero-form-note hero-whatsapp-note"><svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14"><path d="M8 1.5a6.5 6.5 0 0 0-5.6 9.8L1.5 14.5l3.3-.9A6.5 6.5 0 1 0 8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /></svg>Sin compromiso · Te escribimos por WhatsApp para revisar tu caso.</p>
         </form>
       {:else}
         <div class="hero-step hero-done" role="status">
