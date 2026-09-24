@@ -185,8 +185,12 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
 .institution-picker { position:relative; font-weight:400 }
 .institution-picker > summary { min-height:3rem }
 .institution-picker > summary::-webkit-details-marker { display:none }
+.institution-picker-backdrop { position:fixed; z-index:209; inset:0; width:100vw; height:100vh; height:100dvh; padding:0; border:0; background:rgba(20,15,29,.48); touch-action:none }
+.institution-picker-backdrop[hidden] { display:none !important }
 .institution-picker-options { position:fixed; z-index:210; top:1rem; left:1rem; width:calc(100vw - 2rem); max-height:min(18rem,45vh); overflow:auto; overscroll-behavior:contain; touch-action:pan-y; padding:.5rem; border:1px solid var(--border); border-radius:.85rem; background:var(--surface-raised); box-shadow:0 16px 40px rgba(12,16,28,.24) }
 .institution-picker-options[hidden] { display:none !important }
+.institution-picker-options.institution-picker-sheet { display:flex; flex-direction:column; border-radius:1rem 1rem .75rem .75rem; padding-bottom:max(.5rem,env(safe-area-inset-bottom)); box-shadow:0 20px 60px rgba(12,16,28,.3) }
+.institution-picker-sheet > .institution-picker-toolbar,.institution-picker-sheet > .institution-picker-actions,.institution-picker-sheet > .institution-picker-group,.institution-picker-sheet > .institution-empty { flex:none }
 .institution-picker-group + .institution-picker-group { margin-top:.5rem; border-top:1px solid var(--border); padding-top:.35rem }
 .institution-picker-option { display:flex; align-items:center; gap:.65rem; border-radius:.55rem; padding:.55rem .5rem; font-size:.9rem; cursor:pointer }
 .institution-picker-option:hover { background:var(--brand-soft) }
@@ -200,6 +204,8 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
 .institution-search svg { flex:none; }
 .institution-search input { width:100%; min-width:0; border:0; background:transparent; color:var(--text); font-size:16px; font-weight:500; outline:none; }
 .institution-search input::-webkit-search-cancel-button { cursor:pointer; }
+.institution-picker-close { display:none; width:2.25rem; height:2.25rem; flex:none; place-items:center; border:1px solid var(--border); border-radius:.65rem; background:var(--surface-raised); color:var(--text); font-size:1.35rem; line-height:1; }
+.institution-picker-sheet .institution-picker-close { display:grid; }
 .institution-count { color:var(--muted); font-size:.8125rem; font-weight:700; }
 .institution-empty { margin:0; padding:.9rem .5rem; color:var(--muted); font-size:.875rem; line-height:1.45; }
 .institution-clear { flex:none; border:0; padding:.4rem .55rem; border-radius:.5rem; background:transparent; color:var(--brand); font-size:.82rem; font-weight:700; text-underline-offset:3px }

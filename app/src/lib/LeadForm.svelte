@@ -144,10 +144,12 @@
   function applyInstitutionSelection() {
     institutions = [...draftInstitutions];
     validateField('institution');
-    if (institutionPicker) {
-      institutionPicker.open = false;
-      institutionPicker.querySelector('summary')?.focus();
-    }
+    closeInstitutionPicker();
+  }
+  function closeInstitutionPicker() {
+    if (!institutionPicker) return;
+    institutionPicker.open = false;
+    institutionPicker.querySelector('summary')?.focus();
   }
 
   // The options panel is moved to the page root so the card's overflow and stacking never clip it.
@@ -157,12 +159,37 @@
     institutionPicker = node;
     const placeholder = document.createComment('institution-picker-panel');
     panel.parentNode.insertBefore(placeholder, panel);
-    (document.querySelector('.site') || document.body).appendChild(panel);
+    const root = document.querySelector('.site') || document.body;
+    const backdrop = document.createElement('button');
+    backdrop.type = 'button';
+    backdrop.className = 'institution-picker-backdrop';
+    backdrop.setAttribute('aria-label', 'Cerrar selector de instituciones');
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.tabIndex = -1;
+    backdrop.hidden = true;
+    root.appendChild(backdrop);
+    root.appendChild(panel);
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Selecciona las instituciones de tu deuda');
     panel.hidden = true;
     let wasOpen = false;
+    let originalBodyOverflow = null;
+    function setBackgroundLocked(locked) {
+      if (locked && originalBodyOverflow === null) {
+        originalBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+      } else if (!locked && originalBodyOverflow !== null) {
+        document.body.style.overflow = originalBodyOverflow;
+        originalBodyOverflow = null;
+      }
+    }
     function update() {
       if (!node.open) {
         panel.hidden = true;
+        backdrop.hidden = true;
+        panel.classList.remove('institution-picker-sheet');
+        panel.removeAttribute('aria-modal');
+        setBackgroundLocked(false);
         if (wasOpen) { draftInstitutions = [...institutions]; institutionQuery = ''; }
         wasOpen = false;
         return;
@@ -171,28 +198,82 @@
       if (opening) draftInstitutions = [...institutions];
       wasOpen = true;
       const rect = summary.getBoundingClientRect();
-      const maxHeight = Math.min(320, window.innerHeight * 0.5);
-      const below = window.innerHeight - rect.bottom - 16;
-      const height = Math.max(140, Math.min(maxHeight, Math.max(below, rect.top - 16)));
-      const top = below >= 180 ? rect.bottom + 6 : Math.max(8, rect.top - height - 6);
+      const viewport = window.visualViewport;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      const viewportLeft = viewport?.offsetLeft ?? 0;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportWidth = viewport?.width ?? window.innerWidth;
+      const viewportBottom = viewportTop + viewportHeight;
+      const placementGap = 6;
+      const viewportPadding = 8;
+      const below = viewportBottom - rect.bottom - placementGap - viewportPadding;
+      const above = rect.top - viewportTop - placementGap - viewportPadding;
+      let useSheet = viewportWidth <= 640 || viewportHeight <= 520;
+      let top = 0;
+      let left = 0;
+      let width = 0;
+      let height = 0;
+
+      if (!useSheet) {
+        const maxHeight = Math.min(320, Math.max(0, viewportHeight - 32));
+        const openBelow = below >= Math.min(220, maxHeight) || below >= above;
+        height = Math.min(maxHeight, Math.max(0, openBelow ? below : above));
+        if (height < 200) {
+          useSheet = true;
+        } else {
+          width = Math.min(Math.max(rect.width, 260), viewportWidth - 16);
+          top = openBelow ? rect.bottom + placementGap : rect.top - height - placementGap;
+          left = Math.min(Math.max(rect.left, viewportLeft + 8), viewportLeft + viewportWidth - width - 8);
+        }
+      }
+
+      if (useSheet) {
+        height = Math.max(0, Math.min(640, viewportHeight - 16));
+        top = viewportBottom - height - 8;
+        left = viewportLeft + 8;
+        width = Math.max(0, viewportWidth - 16);
+      }
+
+      panel.classList.toggle('institution-picker-sheet', useSheet);
+      if (useSheet) panel.setAttribute('aria-modal', 'true');
+      else panel.removeAttribute('aria-modal');
+      backdrop.hidden = !useSheet;
+      setBackgroundLocked(useSheet);
       panel.hidden = false;
       panel.style.top = `${top}px`;
-      panel.style.left = `${Math.max(8, rect.left)}px`;
-      panel.style.width = `${Math.min(Math.max(rect.width, 260), window.innerWidth - 16)}px`;
+      panel.style.left = `${left}px`;
+      panel.style.width = `${width}px`;
+      panel.style.height = useSheet ? `${height}px` : '';
       panel.style.maxHeight = `${height}px`;
-      if (opening && window.matchMedia('(pointer: fine)').matches) panel.querySelector('.institution-search input')?.focus();
+      if (opening) panel.querySelector('.institution-search input')?.focus();
     }
     function onPanelKey(event) {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      node.open = false;
-      summary.focus();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeInstitutionPicker();
+        return;
+      }
+      if (event.key !== 'Tab' || !panel.classList.contains('institution-picker-sheet')) return;
+      const focusable = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled])')];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+    backdrop.addEventListener('click', closeInstitutionPicker);
     panel.addEventListener('keydown', onPanelKey);
     node.addEventListener('toggle', update);
     document.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
-    return { destroy() { panel.removeEventListener('keydown', onPanelKey); node.removeEventListener('toggle', update); document.removeEventListener('scroll', update, true); window.removeEventListener('resize', update); placeholder.parentNode?.insertBefore(panel, placeholder); placeholder.remove(); institutionPicker = null; } };
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+    return { destroy() { setBackgroundLocked(false); backdrop.removeEventListener('click', closeInstitutionPicker); backdrop.remove(); panel.removeEventListener('keydown', onPanelKey); node.removeEventListener('toggle', update); document.removeEventListener('scroll', update, true); window.removeEventListener('resize', update); window.visualViewport?.removeEventListener('resize', update); window.visualViewport?.removeEventListener('scroll', update); placeholder.parentNode?.insertBefore(panel, placeholder); placeholder.remove(); institutionPicker = null; } };
   }
 
   async function submitDetails(event) {
@@ -286,6 +367,7 @@
                   <div class="institution-picker-toolbar">
                     <label class="institution-search"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg><span class="sr-only">Buscar institución</span><input type="search" placeholder="Buscar institución" autocomplete="off" enterkeyhint="search" bind:value={institutionQuery} onkeydown={(event) => { if (event.key === 'Enter') event.preventDefault(); }} /></label>
                     <button type="button" class="institution-clear focus-ring" onclick={clearInstitutionSelection} disabled={!draftInstitutions.length}>Limpiar</button>
+                    <button type="button" class="institution-picker-close focus-ring" onclick={closeInstitutionPicker} aria-label="Cerrar selector de instituciones">×</button>
                   </div>
                   {#if !filteredGroups.length}<p class="institution-empty">No encontramos «{institutionQuery.trim()}». Elige «Otros bancos», «Otras fintech o financieras» o «No estoy seguro».</p>{/if}
                   {#each filteredGroups as group}
