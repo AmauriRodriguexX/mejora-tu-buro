@@ -15,6 +15,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+.claude/
 
 # Material de auditoría local; no publicar en el repositorio de propuesta.
 evidencia/

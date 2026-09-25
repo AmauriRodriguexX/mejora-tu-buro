@@ -15,14 +15,13 @@
   });
 </script>
 
-<section id="hero" class="hero-shell relative isolate border-b" style="border-color:var(--border)">
+<section id="hero" class="hero-shell relative isolate">
   <div class="hero-visual absolute inset-0" aria-hidden="true"><img src="./images/hero-persona-app-1920x1080.png" alt="" class="hero-image absolute inset-0 h-full w-full object-cover" /><div class="hero-wash absolute inset-0"></div><div class="hero-bottom-wash absolute inset-0"></div></div>
   <div class="hero-content relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <div class="hero-copy">
       <p class="eyebrow mb-3">Asesoría para ordenar tus deudas</p>
-      <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"><span class="sr-only">Recupera tu tranquilidad. Empieza aquí.</span><span aria-hidden="true">Recupera tu tranquilidad.<br /><span class="typing-headline" style="color:var(--brand)"><span>{rotatingPhrase}<span class="typing-caret" aria-hidden="true"></span></span></span><span class="hero-mobile-headline">Empieza aquí.</span></span></h1>
-      <p class="muted hero-description hero-desktop-description mt-4 max-w-xl text-lg leading-relaxed">Revisamos tu situación y te explicamos las opciones disponibles para tu caso, con lenguaje claro y sin compromiso en la primera conversación.</p>
-      <p class="muted hero-description hero-mobile-description">Te orientamos con claridad, sin compromiso.</p>
+      <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl"><span class="sr-only">Recupera tu tranquilidad. Hablemos de tu deuda.</span><span aria-hidden="true">Recupera tu tranquilidad.<br /><span class="typing-headline" style="color:var(--brand)"><span>{rotatingPhrase}<span class="typing-caret" aria-hidden="true"></span></span></span></span></h1>
+      <p class="muted hero-description mt-4 max-w-xl text-lg leading-relaxed">Revisamos tu situación y te explicamos las opciones disponibles para tu caso, con lenguaje claro y sin compromiso en la primera conversación.</p>
 
       <LeadForm {savingPlan} />
     </div>

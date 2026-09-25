@@ -1,4 +1,4 @@
-<section class="trust-banner relative isolate overflow-hidden border-y" aria-labelledby="trust-banner-title">
+<section class="trust-banner relative isolate overflow-hidden" aria-labelledby="trust-banner-title">
   <img class="trust-banner-image absolute inset-0 h-full w-full object-cover" src="./images/trust-banner-1920x1080.png" alt="Dos personas revisan juntas su situación financiera con tranquilidad" loading="lazy" />
   <div class="trust-banner-wash absolute inset-0" aria-hidden="true"></div>
   <div class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">

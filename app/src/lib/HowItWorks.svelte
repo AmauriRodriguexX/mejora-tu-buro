@@ -1,1 +1,27 @@
-<section id="como-funciona" class="surface py-16 sm:py-20"><div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div class="max-w-2xl"><p class="eyebrow">Cómo funciona</p><h2 class="mt-3 text-3xl font-extrabold sm:text-4xl">Entiende el proceso antes de compartir tus datos</h2><p class="muted mt-4 leading-relaxed">Queremos que sepas qué sigue y qué información necesitamos en cada momento.</p></div><ol class="mt-10 grid gap-5 md:grid-cols-3"><li class="card rounded-2xl p-6"><span class="eyebrow">Paso 1</span><h3 class="mt-3 text-xl font-bold">Revisamos tu caso</h3><p class="muted mt-3 text-sm leading-relaxed">Dejas tu nombre, celular y correo. Por WhatsApp te preguntamos el monto y con quién tienes la deuda.</p></li><li class="card rounded-2xl p-6"><span class="eyebrow">Paso 2</span><h3 class="mt-3 text-xl font-bold">Te explicamos opciones</h3><p class="muted mt-3 text-sm leading-relaxed">Un asesor revisa si podemos atender el caso y explica requisitos, costos y posibles efectos en tu historial.</p></li><li class="card rounded-2xl p-6"><span class="eyebrow">Paso 3</span><h3 class="mt-3 text-xl font-bold">Tú decides</h3><p class="muted mt-3 text-sm leading-relaxed">Solo si eliges avanzar, recibirás los siguientes pasos. Antes de cualquier pago, revisa los documentos aplicables.</p></li></ol></div></section>
+<script>
+  const steps = [
+    { title: 'Revisamos tu caso', copy: 'Dejas tu nombre, celular y correo. Por WhatsApp te preguntamos el monto y con quién tienes la deuda.' },
+    { title: 'Te explicamos opciones', copy: 'Un asesor revisa si podemos atender el caso y explica requisitos, costos y posibles efectos en tu historial.' },
+    { title: 'Tú decides', copy: 'Solo si eliges avanzar, recibirás los siguientes pasos. Antes de cualquier pago, revisa los documentos aplicables.' }
+  ];
+</script>
+
+<section id="como-funciona" class="surface py-16 sm:py-20">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl">
+      <p class="eyebrow">Cómo funciona</p>
+      <h2 class="mt-3 text-3xl font-extrabold sm:text-4xl">Entiende el proceso antes de compartir tus datos</h2>
+      <p class="muted mt-4 leading-relaxed">Queremos que sepas qué sigue y qué información necesitamos en cada momento.</p>
+    </div>
+
+    <ol class="process-rail">
+      {#each steps as step, index}
+        <li class="process-step">
+          <span class="process-node"><span class="process-number">{index + 1}</span></span>
+          <h3 class="process-title">{step.title}</h3>
+          <p class="process-copy">{step.copy}</p>
+        </li>
+      {/each}
+    </ol>
+  </div>
+</section>
