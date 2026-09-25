@@ -25,7 +25,7 @@
 
 <section class="surface blog-index-section">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-    <a class="footer-link text-sm font-bold" href={`${base}/`}>← Volver al inicio</a>
+    
     <div class="mt-8 max-w-3xl">
       <p class="eyebrow">Blog Mejora Buró · {activeCategory.label}</p>
       <h1 class="mt-3 text-4xl font-extrabold tracking-tight sm:text-5xl">{activeCategory.slug ? `Guías sobre ${activeCategory.label.toLowerCase()}` : 'Información para tomar mejores decisiones'}</h1>
@@ -48,12 +48,14 @@
             <span class="footer-link mt-5 inline-flex text-sm font-bold">Leer artículo →</span>
           </div>
         </a>
-        <div class="grid gap-5">
+        <div class="blog-side-list">
           {#each posts.slice(1, 3) as post}
-            <a class="blog-card card rounded-2xl p-5" href={articleUrl(post)}>
-              <div class="flex gap-4">
-                <img class="blog-list-thumb" src={`${base}/images/blog/${post.image}`} alt="" loading="lazy" />
-                <div><span class="eyebrow">{post.category}</span><h3 class="mt-2 text-xl font-bold leading-snug">{post.title}</h3><p class="muted mt-2 text-sm leading-relaxed">{post.excerpt}</p></div>
+            <a class="blog-card blog-side-card card rounded-2xl" href={articleUrl(post)}>
+              <img class="blog-side-thumb" src={`${base}/images/blog/${post.image}`} alt="" loading="lazy" />
+              <div class="blog-side-body">
+                <span class="eyebrow">{post.category}</span>
+                <h3 class="mt-2 text-xl font-bold leading-snug">{post.title}</h3>
+                <p class="muted mt-2 text-sm leading-relaxed">{post.excerpt}</p>
               </div>
             </a>
           {/each}

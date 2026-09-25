@@ -23,7 +23,7 @@
 
 <section class="surface route-generic" aria-labelledby="testimonios-title">
   <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-    <a class="footer-link text-sm font-bold" href={base || '/'}>← Volver al inicio</a>
+    
     <div class="mt-8 grid items-center gap-8 lg:grid-cols-[.9fr_1.1fr]">
       <div class="max-w-2xl">
         <p class="eyebrow">Historias que orientan</p>
