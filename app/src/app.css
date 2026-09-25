@@ -407,6 +407,11 @@ button.underline:hover { color:var(--brand-strong); opacity:.8; }
 .hero-review { right:max(1rem,calc((100vw - 80rem) / 2 + 1rem)); bottom:1.25rem; }
 /* Keep the diagnostic flow readable and tappable on phones and compact tablets. */
 @media (max-width:1024px) {
+  /* Barra sólida en móvil y tablet. En iOS Safari, un header sticky con backdrop-filter toma como
+     fondo el contenido que va a pasar por debajo, y con la foto del hero pegada al borde superior
+     la barra se teñía de la imagen y se veía como una franja gris encima de la foto.
+     El cristal se queda en escritorio, donde no ocurre. */
+  .site-header:not(.menu-open)::before { background-color:var(--bg); background-image:none; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
   .site-header > div { height:3.5rem; }
   .site-header .brand-logo { width:52px; height:38px; }
   .brand-logo-link { min-height:2.75rem; }
